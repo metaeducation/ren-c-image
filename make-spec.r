@@ -1,16 +1,8 @@
-REBOL []
-
-name: 'Image
-source: %image/mod-image.c
-depends: [
-    %image/t-image.c
+REBOL [
+    Name: Image
+    Notes: "See %extensions/README.md for the format and fields of this file"
 ]
-includes: [%prep/extensions/image]
-definitions: []
-cflags: []
-searches: []
-ldflags: []
 
-libraries: []
+use-librebol: 'no  ; fiddles with Stubs/Nodes
 
-options: []
+sources: %mod-image.c

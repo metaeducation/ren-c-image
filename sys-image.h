@@ -24,44 +24,50 @@
 //
 //=//// NOTES /////////////////////////////////////////////////////////////=//
 //
-// * The optimization of using the LINK() and MISC() fields of a BINARY! is
-//   not used in Ren-C's image, because that would preclude the use of a
-//   binary from another source who needed those fields for some other form
-//   of tracking.  (Imagine if vector used MISC() for its signed flag, and
-//   you tried to `make image! bytes of my-vector`, overwriting the flag
-//   with the image width.)  Instead, a singular array to hold the binary
-//   is made.  A `make image!` that did not use a foreign source could
-//   optimize this and consider it the binary owner, at same cost as R3-Alpha.
+// * ...
 
-#define LINK_Width_TYPE         intptr_t
-#define LINK_Width_CAST         (intptr_t)
-#define HAS_LINK_Width          FLAVOR_ARRAY
 
-#define MISC_Height_TYPE        intptr_t
-#define MISC_Height_CAST        (intptr_t)
-#define HAS_MISC_Height         FLAVOR_ARRAY
+//=//// IMAGE STUB SUBCLASS ///////////////////////////////////////////////=//
 
-extern REBTYP* EG_Image_Type;
+// The optimization of using the LINK() and MISC() fields of a Binary is
+// not used in Ren-C's image, because that would preclude the use of a
+// BLOB! from another source who needed those fields for some other form
+// of tracking.  (Imagine if vector used MISC() for its signed flag, and
+// you tried to `make image! bytes of my-vector`, overwriting the flag
+// with the image width.)  Instead, a singular array to hold the binary
+// is made.  A `make image!` that did not use a foreign source could
+// optimize this and consider it the binary owner, at same cost as R3-Alpha.
 
-inline static REBVAL *VAL_IMAGE_BIN(noquote(Cell(const*)) v) {
-    assert(CELL_CUSTOM_TYPE(v) == EG_Image_Type);
-    return cast(REBVAL*, ARR_SINGLE(ARR(VAL_NODE1(v))));
+#if CPLUSPLUS_11
+    struct Image : public Stub {};
+#else
+    typedef Stub Image;
+#endif
+
+
+//=//// IMAGE STUB SLOT USAGE /////////////////////////////////////////////=//
+
+#define LINK_IMAGE_WIDTH(s)     (s)->link.length
+#define MISC_IMAGE_HEIGHT(s)    (s)->misc.length
+// INFO not currently used
+// BONUS not currently used
+
+
+
+INLINE Image* VAL_IMAGE(const Cell* v) {
+    assert(Is_Image(v));
+    return cast(Image*, CELL_NODE1(v));
 }
 
-#define VAL_IMAGE_WIDTH(v) \
-    ARR(VAL_NODE1(v))->link.any.i
+#define VAL_IMAGE_BIN(v)        cast(Element*, Stub_Cell(VAL_IMAGE(v)))
+#define VAL_IMAGE_WIDTH(v)      LINK_IMAGE_WIDTH(VAL_IMAGE(v))
+#define VAL_IMAGE_HEIGHT(v)     MISC_IMAGE_HEIGHT(VAL_IMAGE(v))
 
-#define VAL_IMAGE_HEIGHT(v) \
-    ARR(VAL_NODE1(v))->misc.any.i
+#define VAL_IMAGE_HEAD(v) \
+    Binary_Head(Cell_Binary_Ensure_Mutable(VAL_IMAGE_BIN(v)))
 
-inline static Byte* VAL_IMAGE_HEAD(noquote(Cell(const*)) v) {
-    assert(CELL_CUSTOM_TYPE(v) == EG_Image_Type);
-    return SER_DATA(VAL_BINARY_ENSURE_MUTABLE(VAL_IMAGE_BIN(v)));
-}
-
-inline static Byte* VAL_IMAGE_AT_HEAD(noquote(Cell(const*)) v, REBLEN pos) {
-    return VAL_IMAGE_HEAD(v) + (pos * 4);
-}
+#define VAL_IMAGE_AT_HEAD(v,pos) \
+    (VAL_IMAGE_HEAD(v) + (pos * 4))
 
 
 // !!! The functions that take into account the current index position in the
@@ -71,54 +77,57 @@ inline static Byte* VAL_IMAGE_AT_HEAD(noquote(Cell(const*)) v, REBLEN pos) {
 // a lot of sense.
 
 #define VAL_IMAGE_POS(v) \
-    PAYLOAD(Any, (v)).second.i
+    (v)->payload.split.two.i
 
-inline static Byte* VAL_IMAGE_AT(noquote(Cell(const*)) v) {
-    return VAL_IMAGE_AT_HEAD(v, VAL_IMAGE_POS(v));
-}
+#define VAL_IMAGE_AT(v) \
+    VAL_IMAGE_AT_HEAD(v, VAL_IMAGE_POS(v))
 
-inline static REBLEN VAL_IMAGE_LEN_HEAD(noquote(Cell(const*)) v) {
+INLINE REBLEN VAL_IMAGE_LEN_HEAD(const Cell* v) {
     return VAL_IMAGE_HEIGHT(v) * VAL_IMAGE_WIDTH(v);
 }
 
-inline static REBLEN VAL_IMAGE_LEN_AT(noquote(Cell(const*)) v) {
+INLINE REBLEN VAL_IMAGE_LEN_AT(const Cell* v) {
     if (VAL_IMAGE_POS(v) >= cast(REBIDX, VAL_IMAGE_LEN_HEAD(v)))
         return 0;  // avoid negative position
     return VAL_IMAGE_LEN_HEAD(v) - VAL_IMAGE_POS(v);
 }
 
-inline static bool IS_IMAGE(Cell(const*) v) {
-    //
-    // Note that for this test, if there's a quote level it doesn't count...
-    // that would be QUOTED! (IS_QUOTED()).  To test for quoted images, you
-    // have to call CELL_CUSTOM_TYPE() on the VAL_UNESCAPED() cell.
-    //
-    return IS_CUSTOM(v) and CELL_CUSTOM_TYPE(v) == EG_Image_Type;
-}
-
-inline static REBVAL *Init_Image(
-    Cell(*) out,
-    const REBSER *bin,
+INLINE Element* Init_Image(
+    Init(Element) out,
+    const Binary* bin,
     REBLEN width,
     REBLEN height
 ){
-    assert(GET_SERIES_FLAG(bin, MANAGED));
+    assert(Is_Node_Managed(bin));
 
-    Array(*) a = Alloc_Singular(NODE_FLAG_MANAGED);
-    Init_Binary(ARR_SINGLE(a), bin);
+    Array* blob_holder = cast(Array*, Prep_Stub(
+        FLAG_FLAVOR(CELLS)
+            | NODE_FLAG_MANAGED
+            | (not STUB_FLAG_LINK_NODE_NEEDS_MARK)  // width, integer
+            | (not STUB_FLAG_MISC_NODE_NEEDS_MARK)  // height, integer
+            | (not STUB_FLAG_INFO_NODE_NEEDS_MARK),  // info, not used ATM
+        Alloc_Stub()
+    ));
+    Init_Blob(Force_Erase_Cell(Stub_Cell(blob_holder)), bin);
 
-    RESET_CUSTOM_CELL(out, EG_Image_Type, CELL_FLAG_FIRST_IS_NODE);
-    INIT_VAL_NODE1(out, a);
+    Reset_Extended_Cell_Header_Noquote(
+        out,
+        EXTENDED_HEART(Is_Image),
+        (not CELL_FLAG_DONT_MARK_NODE1)  // image stub needs mark
+            | CELL_FLAG_DONT_MARK_NODE2  // index shouldn't be marked
+    );
+
+    CELL_NODE1(out) = blob_holder;
 
     VAL_IMAGE_WIDTH(out) = width;  // see why this isn't put on bin...
     VAL_IMAGE_HEIGHT(out) = height;  // (...it would corrupt shared series!)
 
     VAL_IMAGE_POS(out) = 0;  // !!! sketchy concept, is in BINARY!
 
-    return cast(REBVAL*, out);
+    return out;
 }
 
-inline static void RESET_IMAGE(Byte* p, REBLEN num_pixels) {
+INLINE void RESET_IMAGE(Byte* p, REBLEN num_pixels) {
     Byte* start = p;
     Byte* stop = start + (num_pixels * 4);
     while (start < stop) {
@@ -131,24 +140,17 @@ inline static void RESET_IMAGE(Byte* p, REBLEN num_pixels) {
 
 // Creates WxH image, black pixels, all opaque.
 //
-inline static REBVAL *Init_Image_Black_Opaque(Cell(*) out, REBLEN w, REBLEN h)
-{
+INLINE Cell* Init_Image_Black_Opaque(
+    Init(Element) out,
+    REBLEN w,
+    REBLEN h
+){
     Size size = (w * h) * 4;  // RGBA pixels, 4 bytes each
-    Binary(*) bin = Make_Binary(size);
-    TERM_BIN_LEN(bin, size);
-    Manage_Series(bin);
+    Binary* bin = Make_Binary(size);
+    Term_Binary_Len(bin, size);
+    Manage_Flex(bin);
 
-    RESET_IMAGE(SER_DATA(bin), (w * h));  // length in 'pixels'
+    RESET_IMAGE(Binary_Head(bin), (w * h));  // length in 'pixels'
 
     return Init_Image(out, bin, w, h);
 }
-
-
-// !!! These hooks allow the REB_IMAGE cell type to dispatch to code in the
-// IMAGE! extension if it is loaded.
-//
-extern REBINT CT_Image(noquote(Cell(const*)) a, noquote(Cell(const*)) b, bool strict);
-extern Bounce MAKE_Image(Frame(*) frame_, enum Reb_Kind kind, option(const REBVAL*) parent, const REBVAL *arg);
-extern Bounce TO_Image(Frame(*) frame_, enum Reb_Kind kind, const REBVAL *arg);
-extern void MF_Image(REB_MOLD *mo, noquote(Cell(const*)) v, bool form);
-extern REBTYPE(Image);
