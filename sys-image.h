@@ -112,7 +112,7 @@ INLINE Element* Init_Image(
 
     Reset_Extended_Cell_Header_Noquote(
         out,
-        EXTENDED_HEART(Is_Image),
+        EXTRA_HEART_IMAGE,
         (not CELL_FLAG_DONT_MARK_NODE1)  // image stub needs mark
             | CELL_FLAG_DONT_MARK_NODE2  // index shouldn't be marked
     );

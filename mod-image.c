@@ -35,29 +35,24 @@
 // See further remarks in %extensions/image/README.md
 //
 
+#include "sys-core.h"
 #include "tmp-mod-image.h"
 
 #include "sys-image.h"
 
 
 //
-//  export image!: native [
+//  Set_Pixel_Tuple: C
 //
-//  "Hack to work around the lack of exposure of the IMAGE! datatype"
-//
-//       return: "The IMAGE! datatype"
-//           [datatype!]
-//  ]
-//
-DECLARE_NATIVE(IMAGE_X)
-//
-// !!! Haven't figured out how to get the ball rolling with the IMAGE! type
-// being exposed to the user.  Use an arity-0 function for now.  :-(
+static void Set_Pixel_Tuple(Byte* dp, const Element* tuple)
 {
-    INCLUDE_PARAMS_OF_IMAGE_X;
-
-    Copy_Cell(OUT, EXTENDED_HEART(Is_Image));  // API cell, return COPY() warns
-    return OUT;
+    dp[0] = Cell_Sequence_Byte_At(tuple, 0);  // red
+    dp[1] = Cell_Sequence_Byte_At(tuple, 1);  // green
+    dp[2] = Cell_Sequence_Byte_At(tuple, 2); // blue
+    if (Cell_Sequence_Len(tuple) > 3)
+        dp[3] = Cell_Sequence_Byte_At(tuple, 3);  // alpha
+    else
+        dp[3] = 0xff;  // default alpha to opaque
 }
 
 
@@ -82,100 +77,6 @@ static void Tuples_To_RGBA(
 
 
 //
-//  Set_Pixel_Tuple: C
-//
-static void Set_Pixel_Tuple(Byte* dp, const Element* tuple)
-{
-    dp[0] = Cell_Sequence_Byte_At(tuple, 0);  // red
-    dp[1] = Cell_Sequence_Byte_At(tuple, 1);  // green
-    dp[2] = Cell_Sequence_Byte_At(tuple, 2); // blue
-    if (Cell_Sequence_Len(tuple) > 3)
-        dp[3] = Cell_Sequence_Byte_At(tuple, 3);  // alpha
-    else
-        dp[3] = 0xff;  // default alpha to opaque
-}
-
-
-//
-//  Find_Non_Tuple_In_Array: C
-//
-// Searches array from current index, returns non-tuple cell if found.
-//
-static Option(const Element*) Find_Non_Tuple_In_Array(const Element* any_array)
-{
-    const Element* tail;
-    const Element* v = Cell_List_At(&tail, any_array);
-
-    for (; v != tail; ++v)
-        if (not Is_Block(v))
-            return v;
-
-    return nullptr;
-}
-
-
-//
-//  Copy_Rect_Data: C
-//
-static void Copy_Rect_Data(
-    Sink(Element) dst,
-    REBINT dx,
-    REBINT dy,
-    REBINT w,
-    REBINT h,
-    const Element* src,
-    REBINT sx,
-    REBINT sy
-){
-    if (w <= 0 || h <= 0)
-        return;
-
-    // Clip at edges:
-    if (dx + w > VAL_IMAGE_WIDTH(dst))
-        w = VAL_IMAGE_WIDTH(dst) - dx;
-    if (dy + h > VAL_IMAGE_HEIGHT(dst))
-        h = VAL_IMAGE_HEIGHT(dst) - dy;
-
-    const Byte* sbits =
-        VAL_IMAGE_HEAD(src)
-        + (sy * VAL_IMAGE_WIDTH(src) + sx) * 4;
-    Byte* dbits =
-        VAL_IMAGE_HEAD(dst)
-        + (dy * VAL_IMAGE_WIDTH(dst) + dx) * 4;
-    while (h--) {
-        memcpy(dbits, sbits, w*4);
-        sbits += VAL_IMAGE_WIDTH(src) * 4;
-        dbits += VAL_IMAGE_WIDTH(dst) * 4;
-    }
-}
-
-
-//
-//  Fill_Alpha_Line: C
-//
-static void Fill_Alpha_Line(Byte* rgba, Byte alpha, REBINT len)
-{
-    for (; len > 0; len--, rgba += 4)
-        rgba[3] = alpha;
-}
-
-
-//
-//  Fill_Alpha_Rect: C
-//
-static void Fill_Alpha_Rect(
-    Byte* ip,
-    Byte alpha,
-    REBINT w,
-    REBINT dupx,
-    REBINT dupy
-){
-    for (; dupy > 0; dupy--, ip += (w * 4))
-        Fill_Alpha_Line(ip, alpha, dupx);
-}
-
-
-//
 //  Fill_Line: C
 //
 static void Fill_Line(Byte* ip, const Byte pixel[4], REBLEN len, bool only)
@@ -189,6 +90,16 @@ static void Fill_Line(Byte* ip, const Byte pixel[4], REBLEN len, bool only)
         else
             *ip++ = pixel[3]; // alpha
     }
+}
+
+
+//
+//  Fill_Alpha_Line: C
+//
+static void Fill_Alpha_Line(Byte* rgba, Byte alpha, REBINT len)
+{
+    for (; len > 0; len--, rgba += 4)
+        rgba[3] = alpha;
 }
 
 
@@ -208,36 +119,36 @@ static void Fill_Rect(
 }
 
 
-// There is an image "position" stored in the binary.  This is a dodgy
-// concept of a linear index into the image being an X/Y coordinate and
-// permitting "series" operations.  In any case, for two images to compare
-// alike they are compared according to this...but note the width and height
-// aren't taken into account.
 //
-// https://github.com/rebol/rebol-issues/issues/801
+//  Fill_Alpha_Rect: C
 //
-IMPLEMENT_GENERIC(EQUAL_Q, Is_Image)
+static void Fill_Alpha_Rect(
+    Byte* ip,
+    Byte alpha,
+    REBINT w,
+    REBINT dupx,
+    REBINT dupy
+){
+    for (; dupy > 0; dupy--, ip += (w * 4))
+        Fill_Alpha_Line(ip, alpha, dupx);
+}
+
+
+//
+//  Find_Non_Tuple_In_Array: C
+//
+// Searches array from current index, returns non-tuple cell if found.
+//
+static Option(const Element*) Find_Non_Tuple_In_Array(const Element* any_array)
 {
-    INCLUDE_PARAMS_OF_EQUAL_Q;
+    const Element* tail;
+    const Element* v = Cell_List_At(&tail, any_array);
 
-    UNUSED(ARG(STRICT));
+    for (; v != tail; ++v)
+        if (not Is_Block(v))
+            return v;
 
-    Element* a = Element_ARG(VALUE1);
-    Element* b = Element_ARG(VALUE2);
-
-    if (VAL_IMAGE_WIDTH(a) != VAL_IMAGE_WIDTH(b))
-        return LOGIC(false);
-
-    if (VAL_IMAGE_HEIGHT(a) != VAL_IMAGE_HEIGHT(b))
-        return LOGIC(false);
-
-    if (VAL_IMAGE_POS(a) != VAL_IMAGE_POS(b))
-        return LOGIC(false);
-
-    assert(VAL_IMAGE_LEN_AT(a) == VAL_IMAGE_LEN_AT(b));
-
-    int cmp = memcmp(VAL_IMAGE_AT(a), VAL_IMAGE_AT(b), VAL_IMAGE_LEN_AT(a));
-    return LOGIC(cmp == 0);
+    return nullptr;
 }
 
 
@@ -343,6 +254,75 @@ IMPLEMENT_GENERIC(MAKE, Is_Image) {
     }
 
     return FAIL(PARAM(DEF));
+}
+
+
+//
+//  Copy_Rect_Data: C
+//
+static void Copy_Rect_Data(
+    Sink(Element) dst,
+    REBINT dx,
+    REBINT dy,
+    REBINT w,
+    REBINT h,
+    const Element* src,
+    REBINT sx,
+    REBINT sy
+){
+    if (w <= 0 || h <= 0)
+        return;
+
+    // Clip at edges:
+    if (dx + w > VAL_IMAGE_WIDTH(dst))
+        w = VAL_IMAGE_WIDTH(dst) - dx;
+    if (dy + h > VAL_IMAGE_HEIGHT(dst))
+        h = VAL_IMAGE_HEIGHT(dst) - dy;
+
+    const Byte* sbits =
+        VAL_IMAGE_HEAD(src)
+        + (sy * VAL_IMAGE_WIDTH(src) + sx) * 4;
+    Byte* dbits =
+        VAL_IMAGE_HEAD(dst)
+        + (dy * VAL_IMAGE_WIDTH(dst) + dx) * 4;
+    while (h--) {
+        memcpy(dbits, sbits, w*4);
+        sbits += VAL_IMAGE_WIDTH(src) * 4;
+        dbits += VAL_IMAGE_WIDTH(dst) * 4;
+    }
+}
+
+
+// There is an image "position" stored in the binary.  This is a dodgy
+// concept of a linear index into the image being an X/Y coordinate and
+// permitting "series" operations.  In any case, for two images to compare
+// alike they are compared according to this...but note the width and height
+// aren't taken into account.
+//
+// https://github.com/rebol/rebol-issues/issues/801
+//
+IMPLEMENT_GENERIC(EQUAL_Q, Is_Image)
+{
+    INCLUDE_PARAMS_OF_EQUAL_Q;
+
+    UNUSED(ARG(STRICT));
+
+    Element* a = Element_ARG(VALUE1);
+    Element* b = Element_ARG(VALUE2);
+
+    if (VAL_IMAGE_WIDTH(a) != VAL_IMAGE_WIDTH(b))
+        return LOGIC(false);
+
+    if (VAL_IMAGE_HEIGHT(a) != VAL_IMAGE_HEIGHT(b))
+        return LOGIC(false);
+
+    if (VAL_IMAGE_POS(a) != VAL_IMAGE_POS(b))
+        return LOGIC(false);
+
+    assert(VAL_IMAGE_LEN_AT(a) == VAL_IMAGE_LEN_AT(b));
+
+    int cmp = memcmp(VAL_IMAGE_AT(a), VAL_IMAGE_AT(b), VAL_IMAGE_LEN_AT(a));
+    return LOGIC(cmp == 0);
 }
 
 
@@ -504,12 +484,10 @@ static void Bin_To_Alpha(Byte* rgba, REBLEN size, const Byte* bin, REBINT len)
 //
 static void Mold_Image_Data(Molder* mo, const Element* value)
 {
+    USED(&Mold_Image_Data);
+
     REBLEN num_pixels = VAL_IMAGE_LEN_AT(value); // # from index to tail
     const Byte* rgba = VAL_IMAGE_AT(value);
-
-    Append_Int(mo->string, VAL_IMAGE_WIDTH(value));
-    Append_Ascii(mo->string, "x");
-    Append_Int(mo->string, VAL_IMAGE_HEIGHT(value));
 
     Append_Ascii(mo->string, " #{");
 
@@ -884,20 +862,23 @@ static void Make_Complemented_Image(Sink(Element) out, const Element* v)
 }
 
 
-//
-//  MF_Image: C
-//
-static void MF_Image(Molder* mo, const Element* v, bool form)
+IMPLEMENT_GENERIC(MOLDIFY, Is_Image)
 {
-    USED(&MF_Image);
+    INCLUDE_PARAMS_OF_MOLDIFY;
+
+    Element* cell = Element_ARG(ELEMENT);
+    Molder* mo = Cell_Handle_Pointer(Molder, ARG(MOLDER));
+    bool form = Bool_ARG(FORM);
 
     UNUSED(form); // no difference between MOLD and FORM at this time
 
-    Begin_Non_Lexical_Mold(mo, v);
-    Append_Codepoint(mo->string, '[');
-    Mold_Image_Data(mo, v);
+    Append_Ascii(mo->string, "#[image! ");
+    Append_Int(mo->string, VAL_IMAGE_WIDTH(cell));
+    Append_Ascii(mo->string, "x");
+    Append_Int(mo->string, VAL_IMAGE_HEIGHT(cell));
     Append_Codepoint(mo->string, ']');
-    End_Non_Lexical_Mold(mo);
+
+    return NOTHING;
 }
 
 
@@ -1362,7 +1343,7 @@ IMPLEMENT_GENERIC(TAIL_Q, Is_Image)
 //  "Get current index into an IMAGE! value as a pair!"
 //
 //      return: [~null~ pair!]
-//      image [<maybe> any-value?]  ; image! in native spec not working yet
+//      image [<maybe> image!]
 //  ]
 //
 DECLARE_NATIVE(XY_OF)
@@ -1406,7 +1387,7 @@ IMPLEMENT_GENERIC(LENGTH_OF, Is_Image)
 //  "Get the underlying data of an image as a BINARY! value"
 //
 //      return: [~null~ blob!]
-//      image [<maybe> any-value?]  ; image! in native spec not working yet
+//      image [<maybe> image!]
 //  ]
 //
 DECLARE_NATIVE(BYTES_OF)
@@ -1424,14 +1405,10 @@ DECLARE_NATIVE(BYTES_OF)
 }
 
 
-RebolValue* g_rgb_word = nullptr;
-RebolValue* g_alpha_word = nullptr;
-
-
 //
 //  startup*: native [
 //
-//  "Register behaviors for IMAGE!"
+//  "Startup IMAGE! Extension"
 //
 //      return: [~]
 //  ]
@@ -1440,13 +1417,6 @@ DECLARE_NATIVE(STARTUP_P)
 {
     INCLUDE_PARAMS_OF_STARTUP_P;
 
-    g_rgb_word = Register_Symbol("rgb", EXT_SYM_RGB);
-    g_alpha_word = Register_Symbol("alpha", EXT_SYM_ALPHA);
-
-    EXTENDED_HEART(Is_Image) = Register_Datatype("image!");
-
-    Register_Generics(EXTENDED_GENERICS());
-
     return NOTHING;
 }
 
@@ -1454,7 +1424,7 @@ DECLARE_NATIVE(STARTUP_P)
 //
 //  shutdown*: native [
 //
-//  "Unregister behaviors for IMAGE!"
+//  "Shutdown IMAGE! Extension"
 //
 //      return: [~]
 //  ]
@@ -1462,13 +1432,6 @@ DECLARE_NATIVE(STARTUP_P)
 DECLARE_NATIVE(SHUTDOWN_P)
 {
     INCLUDE_PARAMS_OF_SHUTDOWN_P;
-
-    Unregister_Generics(EXTENDED_GENERICS());
-
-    Unregister_Datatype(EXTENDED_HEART(Is_Image));
-
-    Unregister_Symbol(g_rgb_word, EXT_SYM_RGB);
-    Unregister_Symbol(g_alpha_word, EXT_SYM_ALPHA);
 
     return NOTHING;
 }
