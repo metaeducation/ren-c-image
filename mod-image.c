@@ -1381,24 +1381,15 @@ IMPLEMENT_GENERIC(LENGTH_OF, Is_Image)
 }
 
 
-//
-//  export bytes-of: native [
-//
-//  "Get the underlying data of an image as a BINARY! value"
-//
-//      return: [~null~ blob!]
-//      image [<maybe> image!]
-//  ]
-//
-DECLARE_NATIVE(BYTES_OF)
-//
 // !!! The BINARY! currently has a position in it.  This notion of images
 // being at an "index" is sketchy.  Assume that someone asking for the bytes
 // doesn't care about the index.
+//
+IMPLEMENT_GENERIC(BYTES_OF, Is_Image)
 {
     INCLUDE_PARAMS_OF_BYTES_OF;
 
-    Element* image = Element_ARG(IMAGE);
+    Element* image = Element_ARG(VALUE);
 
     const Binary* bin = Cell_Binary(VAL_IMAGE_BIN(image));
     return Init_Blob(OUT, bin);  // at 0 index
