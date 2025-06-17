@@ -540,11 +540,20 @@ static Bounce Modify_Image(Level* level_, SymId sym)
 
     assert(sym == SYM_CHANGE or sym == SYM_INSERT or sym == SYM_APPEND);
 
+    Element* value = Element_ARG(SERIES);  // !!! confusing name
+    Cell_Binary_Ensure_Mutable(VAL_IMAGE_BIN(value));
+
+    if (Is_Nulled(ARG(VALUE))) {  // void
+        if (sym == SYM_APPEND)  // append returns head position
+            VAL_IMAGE_POS(value) = 0;
+        return COPY(value);  // don't panic on read only if it would be noop
+    }
+    if (Is_Antiform(ARG(VALUE)))
+        return PANIC(PARAM(VALUE));
+    Element* arg = Element_ARG(VALUE);
+
     if (Bool_ARG(LINE))
         panic (Error_Bad_Refines_Raw());
-
-    Element* value = Element_ARG(SERIES);  // !!! confusing name
-    Value* arg = ARG(VALUE);
 
     Binary* bin = Cell_Binary_Ensure_Mutable(VAL_IMAGE_BIN(value));
 
@@ -567,9 +576,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
     bool only = false;
 
     if (Is_Block(arg)) {
-        Option(const Element*) non_tuple = Find_Non_Tuple_In_Array(
-            Known_Element(arg)
-        );
+        Option(const Element*) non_tuple = Find_Non_Tuple_In_Array(arg);
         if (non_tuple)
             panic (Error_Bad_Value(unwrap non_tuple));
     }
@@ -705,7 +712,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
         }
         else if (Is_Block(arg)) {  // RGB
             Byte pixel[4];
-            Set_Pixel_Tuple(pixel, Known_Element(arg));
+            Set_Pixel_Tuple(pixel, arg);
             if (Is_Pair(ARG(DUP)))  // rectangular fill
                 Fill_Rect(ip, pixel, w, dup_x, dup_y, only);
             else
@@ -713,7 +720,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
         }
     } else if (Is_Image(arg)) {
         // dst dx dy w h src sx sy
-        Copy_Rect_Data(value, x, y, part_x, part_y, Known_Element(arg), 0, 0);
+        Copy_Rect_Data(value, x, y, part_x, part_y, arg, 0, 0);
     }
     else if (Is_Blob(arg)) {
         Size size;
@@ -885,7 +892,7 @@ IMPLEMENT_GENERIC(MOLDIFY, Is_Image)
 static bool Adjust_Image_Pick_Index_Is_Valid(
     REBINT *index, // gets adjusted
     const Element* value, // image
-    const Element* picker
+    const Value* picker
 ) {
     REBINT n;
     if (Is_Pair(picker)) {
@@ -1014,18 +1021,8 @@ IMPLEMENT_GENERIC(OLDGENERIC, Is_Image)
 
       case SYM_APPEND:
       case SYM_INSERT:
-      case SYM_CHANGE: {
-        if (Is_Void(ARG_N(2))) {
-            if (id == SYM_APPEND)  // append returns head position
-                VAL_IMAGE_POS(image) = 0;
-            return COPY(image);  // don't fail on read only if it would be noop
-        }
-
-        if (Is_Antiform(ARG_N(2)))
-            return FAIL(PARAM_N(2));
-
-        Cell_Binary_Ensure_Mutable(VAL_IMAGE_BIN(image));
-        return Modify_Image(level_, unwrap id); }
+      case SYM_CHANGE:
+        return Modify_Image(level_, unwrap id);
 
       case SYM_FIND:
         return Find_Image(level_);
