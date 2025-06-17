@@ -153,7 +153,7 @@ static Option(const Element*) Find_Non_Tuple_In_Array(const Element* any_array)
 
 
 IMPLEMENT_GENERIC(MAKE, Is_Image) {
-    INCLUDE_PARAMS_OF_MAKE;  // spec [<maybe> blank! pair! block!]
+    INCLUDE_PARAMS_OF_MAKE;  // spec [<opt-out> blank? pair! block!]
     UNUSED(ARG(TYPE));
 
     Element* spec = Element_ARG(DEF);
@@ -1342,8 +1342,8 @@ IMPLEMENT_GENERIC(TAIL_Q, Is_Image)
 //
 //  "Get current index into an IMAGE! value as a pair!"
 //
-//      return: [~null~ pair!]
-//      image [<maybe> image!]
+//      return: [null? pair!]
+//      image [<opt-out> image!]
 //  ]
 //
 DECLARE_NATIVE(XY_OF)
