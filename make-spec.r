@@ -9,4 +9,4 @@ Rebol [
 
 use-librebol: 'no  ; fiddles with Stubs/Nodes
 
-sources: %mod-image.c
+sources: [mod-image.c]
