@@ -1123,18 +1123,30 @@ IMPLEMENT_GENERIC(COPY, Is_Image)
 }
 
 
-IMPLEMENT_GENERIC(PICK, Is_Image)
+IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
 {
-    INCLUDE_PARAMS_OF_PICK;
+    INCLUDE_PARAMS_OF_TWEAK_P;
 
     Element* image = Element_ARG(LOCATION);
-    const Element* picker = Element_ARG(PICKER);
+    const Value* picker = Element_ARG(PICKER);
 
     REBINT index = cast(REBINT, VAL_IMAGE_POS(image));
     REBINT len = VAL_IMAGE_LEN_HEAD(image) - index;
     len = MAX(len, 0);
 
     Byte* src = VAL_IMAGE_AT(image);
+
+    Value* dual = ARG(DUAL);
+    if (Not_Lifted(dual)) {
+        if (Is_Dual_Nulled_Pick_Signal(dual))
+            goto handle_pick;
+
+        return PANIC(Error_Bad_Poke_Dual_Raw(dual));
+    }
+
+    goto handle_poke;
+
+  handle_pick: { /////////////////////////////////////////////////////////////
 
     if (Is_Word(picker)) {
         switch (Cell_Word_Id(picker)) {
@@ -1169,37 +1181,26 @@ IMPLEMENT_GENERIC(PICK, Is_Image)
     if (Adjust_Image_Pick_Index_Is_Valid(&index, image, picker))
         Init_Tuple_From_Pixel(OUT, VAL_IMAGE_AT_HEAD(image, index));
     else
-        Init_Nulled(OUT);
+        return DUAL_SIGNAL_NULL_ABSENT;
 
-    return OUT;
-}
+    return DUAL_LIFTED(OUT);
 
+} handle_poke: { /////////////////////////////////////////////////////////////
 
-IMPLEMENT_GENERIC(POKE, Is_Image)
-{
-    INCLUDE_PARAMS_OF_POKE;
+    Unliftify_Known_Stable(dual);
 
-    Element* image = Element_ARG(LOCATION);
-    const Element* picker = Element_ARG(PICKER);
+    if (Is_Antiform(dual))
+        return PANIC(Error_Bad_Antiform(dual));
 
-    if (Is_Antiform(ARG(VALUE)))
-        return FAIL(PARAM(VALUE));
-
-    Element* poke = Element_ARG(VALUE);
+    Element* poke = Known_Element(dual);
 
     Cell_Binary_Ensure_Mutable(VAL_IMAGE_BIN(image));
-
-    REBINT index = cast(REBINT, VAL_IMAGE_POS(image));
-    REBINT len = VAL_IMAGE_LEN_HEAD(image) - index;
-    len = MAX(len, 0);
-
-    Byte* src = VAL_IMAGE_AT(image);
 
     if (Is_Word(picker)) {
         switch (Cell_Word_Id(picker)) {
           case SYM_SIZE:
             if (not Is_Pair(poke) or Cell_Pair_X(poke) == 0)
-                return PANIC(PARAM(VALUE));
+                return PANIC(PARAM(DUAL));
 
             VAL_IMAGE_WIDTH(image) = Cell_Pair_X(poke);
             VAL_IMAGE_HEIGHT(image) = MIN(
@@ -1240,7 +1241,7 @@ IMPLEMENT_GENERIC(POKE, Is_Image)
                 );
             }
             else
-                return PANIC(PARAM(VALUE));
+                return PANIC(PARAM(DUAL));
             break;
 
           case EXT_SYM_ALPHA:
@@ -1257,21 +1258,21 @@ IMPLEMENT_GENERIC(POKE, Is_Image)
                 Bin_To_Alpha(src, len, data, size);
             }
             else
-                return PANIC(PARAM(VALUE));
+                return PANIC(PARAM(DUAL));
             break;
 
           default:
             panic (picker);
         }
-        return nullptr;
+        return NO_WRITEBACK_NEEDED;
     }
 
     if (not Adjust_Image_Pick_Index_Is_Valid(&index, image, picker))
         panic (Error_Out_Of_Range(picker));
 
-    if (Is_Block(poke)) { // set whole pixel
+    if (Is_Tuple(poke)) { // set whole pixel
         Set_Pixel_Tuple(VAL_IMAGE_AT_HEAD(image, index), poke);
-        return nullptr;
+        return NO_WRITEBACK_NEEDED;
     }
 
     // set the alpha only
@@ -1292,8 +1293,8 @@ IMPLEMENT_GENERIC(POKE, Is_Image)
     Byte* dp = VAL_IMAGE_AT_HEAD(image, index);
     dp[3] = alpha;
 
-    return nullptr;
-}
+    return NO_WRITEBACK_NEEDED;
+}}
 
 
 IMPLEMENT_GENERIC(HEAD_OF, Is_Image)
