@@ -872,11 +872,11 @@ IMPLEMENT_GENERIC(MOLDIFY, Is_Image)
 
     UNUSED(form); // no difference between MOLD and FORM at this time
 
-    Append_Ascii(mo->string, "#[image! ");
+    Begin_Non_Lexical_Mold(mo, cell);
     Append_Int(mo->string, VAL_IMAGE_WIDTH(cell));
     Append_Ascii(mo->string, "x");
     Append_Int(mo->string, VAL_IMAGE_HEIGHT(cell));
-    Append_Codepoint(mo->string, ']');
+    End_Non_Lexical_Mold(mo);
 
     return TRIPWIRE;
 }
