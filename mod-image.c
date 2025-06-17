@@ -305,7 +305,7 @@ IMPLEMENT_GENERIC(EQUAL_Q, Is_Image)
 {
     INCLUDE_PARAMS_OF_EQUAL_Q;
 
-    UNUSED(ARG(STRICT));
+    UNUSED(Bool_ARG(RELAX));
 
     Element* a = Element_ARG(VALUE1);
     Element* b = Element_ARG(VALUE2);

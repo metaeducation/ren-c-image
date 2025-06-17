@@ -51,9 +51,9 @@
 ; symmetry
 (equal? same? #{00} #[image! [1x1 #{00000000}]] same? #[image! [1x1 #{00000000}]] #{00})
 
-(not strict-equal? #{00} #[image! [1x1 #{00000000}]])
+(not equal? #{00} #[image! [1x1 #{00000000}]])
 ; symmetry
-(equal? strict-equal? #{00} #[image! [1x1 #{00000000}]] strict-equal? #[image! [1x1 #{00000000}]] #{00})
+(equal? equal? #{00} #[image! [1x1 #{00000000}]] equal? #[image! [1x1 #{00000000}]] #{00})
 
 (
     a-value: make image! 0x0
@@ -90,7 +90,7 @@
     same? a-value do reduce [a-value]
 )
 
-(if make image! 0x0 [true])
+(if make image! 0x0 [okay])
 
 (
     a-value: make image! 0x0
@@ -104,7 +104,7 @@
 
 (
     a-value: make image! 1x1
-    0.0.0.255 == a-value.1
+    0.0.0.255 = a-value.1
 )
 (
     a-value: make image! 0x0
@@ -123,4 +123,3 @@
 ((make image! [1x1 #{ffffffff}]) = not+ make image! [1x1 #{00000000}])
 
 (false = not make image! 0x0)
-
