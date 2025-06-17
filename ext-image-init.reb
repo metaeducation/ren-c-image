@@ -1,11 +1,11 @@
-REBOL [
-    Title: "Image Extension"
-    Name: Image
-    Type: Module
-    Version: 1.0.0
-    License: {Apache 2.0}
+Rebol [
+    title: "Image Extension"
+    name: Image
+    type: module
+    version: 1.0.0
+    license: {Apache 2.0}
 
-    Notes: {
+    notes: {
         See %extensions/image/README.md
     }
 ]

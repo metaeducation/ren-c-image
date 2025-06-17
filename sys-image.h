@@ -1,8 +1,8 @@
 //
-//  File: %sys-image.h
-//  Summary: {Definitions for IMAGE! Datatype}
-//  Project: "Rebol 3 Interpreter and Run-time (Ren-C branch)"
-//  Homepage: https://github.com/metaeducation/ren-c/
+//  file: %sys-image.h
+//  summary: {Definitions for IMAGE! Datatype}
+//  project: "Rebol 3 Interpreter and Run-time (Ren-C branch)"
+//  homepage: https://github.com/metaeducation/ren-c/
 //
 //=////////////////////////////////////////////////////////////////////////=//
 //
