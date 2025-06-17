@@ -878,7 +878,7 @@ IMPLEMENT_GENERIC(MOLDIFY, Is_Image)
     Append_Int(mo->string, VAL_IMAGE_HEIGHT(cell));
     Append_Codepoint(mo->string, ']');
 
-    return NOTHING;
+    return TRIPWIRE;
 }
 
 
@@ -1410,14 +1410,14 @@ DECLARE_NATIVE(BYTES_OF)
 //
 //  "Startup IMAGE! Extension"
 //
-//      return: [~]
+//      return: []
 //  ]
 //
 DECLARE_NATIVE(STARTUP_P)
 {
     INCLUDE_PARAMS_OF_STARTUP_P;
 
-    return NOTHING;
+    return TRIPWIRE;
 }
 
 
@@ -1426,12 +1426,12 @@ DECLARE_NATIVE(STARTUP_P)
 //
 //  "Shutdown IMAGE! Extension"
 //
-//      return: [~]
+//      return: []
 //  ]
 //
 DECLARE_NATIVE(SHUTDOWN_P)
 {
     INCLUDE_PARAMS_OF_SHUTDOWN_P;
 
-    return NOTHING;
+    return TRIPWIRE;
 }
