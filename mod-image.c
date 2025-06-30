@@ -46,11 +46,11 @@
 //
 static void Set_Pixel_Tuple(Byte* dp, const Element* tuple)
 {
-    dp[0] = Cell_Sequence_Byte_At(tuple, 0);  // red
-    dp[1] = Cell_Sequence_Byte_At(tuple, 1);  // green
-    dp[2] = Cell_Sequence_Byte_At(tuple, 2); // blue
-    if (Cell_Sequence_Len(tuple) > 3)
-        dp[3] = Cell_Sequence_Byte_At(tuple, 3);  // alpha
+    dp[0] = Sequence_Byte_At(tuple, 0);  // red
+    dp[1] = Sequence_Byte_At(tuple, 1);  // green
+    dp[2] = Sequence_Byte_At(tuple, 2); // blue
+    if (Sequence_Len(tuple) > 3)
+        dp[3] = Sequence_Byte_At(tuple, 3);  // alpha
     else
         dp[3] = 0xff;  // default alpha to opaque
 }
@@ -789,7 +789,7 @@ static Bounce Find_Image(Level* level_)
     Byte* p;
 
     if (Is_Tuple(pattern)) {
-        only = (Cell_Sequence_Len(pattern) < 4);
+        only = (Sequence_Len(pattern) < 4);
 
         Byte pixel[4];
         Set_Pixel_Tuple(pixel, pattern);
