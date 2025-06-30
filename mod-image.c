@@ -176,12 +176,12 @@ IMPLEMENT_GENERIC(MAKE, Is_Image) {
         const Element* tail;
         const Element* item = List_At(&tail, spec);
         if (item == tail or not Is_Pair(item))
-            return PANIC(PARAM(DEF));
+            panic (PARAM(DEF));
 
         REBINT w = Cell_Pair_X(item);
         REBINT h = Cell_Pair_Y(item);
         if (w < 0 or h < 0)
-            return PANIC(PARAM(DEF));
+            panic (PARAM(DEF));
 
         ++item;
 
@@ -200,10 +200,10 @@ IMPLEMENT_GENERIC(MAKE, Is_Image) {
             // directly as-is...so Ren-C only supports RGBA.
 
             if (Series_Index(item) != 0)
-                return FAIL("MAKE IMAGE! w/BINARY! must have binary at HEAD");
+                return fail ("MAKE IMAGE! w/BINARY! must have binary at HEAD");
 
             if (Series_Len_Head(item) != cast(REBLEN, w * h * 4))
-                return FAIL("MAKE IMAGE! w/BINARY! needs RGBA pixels for size");
+                return fail ("MAKE IMAGE! w/BINARY! needs RGBA pixels for size");
 
             Init_Image(OUT, Cell_Binary(item), w, h);
             ++item;
@@ -236,7 +236,7 @@ IMPLEMENT_GENERIC(MAKE, Is_Image) {
 
             Option(const Element*) non_tuple = Find_Non_Tuple_In_Array(item);
             if (non_tuple)
-                panic (Error_Bad_Value(unwrap(non_tuple)));
+                abrupt_panic (Error_Bad_Value(unwrap(non_tuple)));
 
             Byte* ip = VAL_IMAGE_HEAD(OUT);  // image pointer
 
@@ -245,15 +245,15 @@ IMPLEMENT_GENERIC(MAKE, Is_Image) {
             );
         }
         else
-            return PANIC(PARAM(DEF));
+            panic (PARAM(DEF));
 
         if (item != tail)
-            return PANIC("Too many elements in BLOCK! for MAKE IMAGE!");
+            panic ("Too many elements in BLOCK! for MAKE IMAGE!");
 
         return OUT;
     }
 
-    return PANIC(PARAM(DEF));
+    panic (PARAM(DEF));
 }
 
 
@@ -549,11 +549,11 @@ static Bounce Modify_Image(Level* level_, SymId sym)
         return COPY(value);  // don't panic on read only if it would be noop
     }
     if (Is_Antiform(ARG(VALUE)))
-        return PANIC(PARAM(VALUE));
+        panic (PARAM(VALUE));
     Element* arg = Element_ARG(VALUE);
 
     if (Bool_ARG(LINE))
-        panic (Error_Bad_Refines_Raw());
+        abrupt_panic (Error_Bad_Refines_Raw());
 
     Binary* bin = Cell_Binary_Ensure_Mutable(VAL_IMAGE_BIN(value));
 
@@ -578,7 +578,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
     if (Is_Block(arg)) {
         Option(const Element*) non_tuple = Find_Non_Tuple_In_Array(arg);
         if (non_tuple)
-            panic (Error_Bad_Value(unwrap non_tuple));
+            abrupt_panic (Error_Bad_Value(unwrap non_tuple));
     }
 
     REBINT dup = 1;
@@ -606,7 +606,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
                 return COPY(value);
         }
         else
-            return PANIC(PARAM(DUP));
+            panic (PARAM(DUP));
     }
 
     REBINT part = 1;
@@ -620,7 +620,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
             } else if (Is_Blob(ARG(PART))) {
                 part = (Series_Index(ARG(PART)) - Series_Index(arg)) / 4;
             } else
-                panic (PARAM(PART));
+                abrupt_panic (PARAM(PART));
             part = MAX(part, 0);
         }
         else if (Is_Image(arg)) {
@@ -630,7 +630,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
             }
             else if (Is_Image(ARG(PART))) {
                 if (VAL_IMAGE_WIDTH(ARG(PART)) == 0)
-                    panic (PARAM(PART));
+                    abrupt_panic (PARAM(PART));
 
                 part_x = VAL_IMAGE_POS(ARG(PART)) - VAL_IMAGE_POS(arg);
                 part_y = part_x / VAL_IMAGE_WIDTH(ARG(PART));
@@ -656,10 +656,10 @@ static Bounce Modify_Image(Level* level_, SymId sym)
                     return COPY(value);
             }
             else
-                return PANIC(PARAM(PART));
+                panic (PARAM(PART));
         }
         else
-            return PANIC(PARAM(VALUE));  // /PART not allowed
+            panic (PARAM(VALUE));  // /PART not allowed
     }
     else {
         if (Is_Image(arg)) {  // Use image for /PART sizes
@@ -678,7 +678,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
             part = Series_Len_At(arg);
         }
         else if (!Is_Integer(arg) && !Is_Block(arg))
-            return PANIC(PARAM(VALUE));
+            panic (PARAM(VALUE));
     }
 
     // Expand image data if necessary:
@@ -701,7 +701,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
         if (Is_Integer(arg)) { // Alpha channel
             REBINT arg_int = VAL_INT32(arg);
             if ((arg_int < 0) || (arg_int > 255))
-                panic (Error_Out_Of_Range(arg));
+                abrupt_panic (Error_Out_Of_Range(arg));
 
             if (Is_Pair(ARG(DUP)))  // rectangular fill
                 Fill_Alpha_Rect(
@@ -738,7 +738,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
             Tuples_To_RGBA(ip, part, List_Item_At(arg), part);
     }
     else
-        return PANIC(PARAM(VALUE));
+        panic (PARAM(VALUE));
 
     Reset_Height(value);
 
@@ -781,7 +781,7 @@ static Bounce Find_Image(Level* level_)
         or Bool_ARG(MATCH)
         or Bool_ARG(PART)
     ){
-        panic (Error_Bad_Refines_Raw());
+        abrupt_panic (Error_Bad_Refines_Raw());
     }
 
     bool only = false;
@@ -798,7 +798,7 @@ static Bounce Find_Image(Level* level_)
     else if (Is_Integer(pattern)) {
         REBINT i = VAL_INT32(pattern);
         if (i < 0 or i > 255)
-            return PANIC(Error_Out_Of_Range(pattern));
+            panic (Error_Out_Of_Range(pattern));
 
         p = Find_Alpha(ip, i, len);
     }
@@ -809,7 +809,7 @@ static Bounce Find_Image(Level* level_)
         return nullptr;
     }
     else
-        return PANIC(PARAM(PATTERN));
+        panic (PARAM(PATTERN));
 
     // Post process the search (failure or apply /match and /tail):
 
@@ -906,7 +906,7 @@ static bool Adjust_Image_Pick_Index_Is_Valid(
     else if (Is_Decimal(picker))
         n = cast(REBINT, VAL_DECIMAL(picker));
     else
-        panic (picker);
+        abrupt_panic (picker);
 
     *index += n;
     if (n > 0)
@@ -1004,11 +1004,11 @@ IMPLEMENT_GENERIC(OLDGENERIC, Is_Image)
             }
             else if (Is_Image(val)) {
                 if (VAL_IMAGE_WIDTH(val) == 0)
-                    return PANIC(PARAM(PART));
+                    panic (PARAM(PART));
                 len = VAL_IMAGE_POS(val) - VAL_IMAGE_POS(image);
             }
             else
-                return PANIC(PARAM(PART));
+                panic (PARAM(PART));
         }
         else len = 1;
 
@@ -1066,7 +1066,7 @@ IMPLEMENT_GENERIC(COPY, Is_Image)
     Element* image = Element_ARG(VALUE);
 
     if (Bool_ARG(DEEP))
-        return PANIC(Error_Bad_Refines_Raw());
+        panic (Error_Bad_Refines_Raw());
 
     if (not Bool_ARG(PART)) {
         Copy_Image_Value(OUT, image, VAL_IMAGE_LEN_AT(image));
@@ -1077,7 +1077,7 @@ IMPLEMENT_GENERIC(COPY, Is_Image)
 
     if (Is_Image(part)) {
         if (VAL_IMAGE_BIN(part) != VAL_IMAGE_BIN(image))
-            return PANIC(PARAM(PART));
+            panic (PARAM(PART));
 
         REBINT len = VAL_IMAGE_POS(part) - VAL_IMAGE_POS(image);
         Copy_Image_Value(OUT, image, len);
@@ -1119,7 +1119,7 @@ IMPLEMENT_GENERIC(COPY, Is_Image)
         return OUT;
     }
 
-    return PANIC(PARAM(PART));
+    panic (PARAM(PART));
 }
 
 
@@ -1141,7 +1141,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
         if (Is_Dual_Nulled_Pick_Signal(dual))
             goto handle_pick;
 
-        return PANIC(Error_Bad_Poke_Dual_Raw(dual));
+        panic (Error_Bad_Poke_Dual_Raw(dual));
     }
 
     goto handle_poke;
@@ -1173,7 +1173,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
           default:
             break;
         }
-        return PANIC(PARAM(PICKER));
+        panic (PARAM(PICKER));
     }
 
   adjust_index:
@@ -1190,7 +1190,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
     Unliftify_Known_Stable(dual);
 
     if (Is_Antiform(dual))
-        return PANIC(Error_Bad_Antiform(dual));
+        panic (Error_Bad_Antiform(dual));
 
     Element* poke = Known_Element(dual);
 
@@ -1200,7 +1200,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
         switch (Word_Id(picker)) {
           case SYM_SIZE:
             if (not Is_Pair(poke) or Cell_Pair_X(poke) == 0)
-                return PANIC(PARAM(DUAL));
+                panic (PARAM(DUAL));
 
             VAL_IMAGE_WIDTH(image) = Cell_Pair_X(poke);
             VAL_IMAGE_HEIGHT(image) = MIN(
@@ -1221,7 +1221,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
             else if (Is_Integer(poke)) {
                 REBINT byte = VAL_INT32(poke);
                 if (byte < 0 or byte > 255)
-                    panic (Error_Out_Of_Range(poke));
+                    abrupt_panic (Error_Out_Of_Range(poke));
 
                 Byte pixel[4];
                 pixel[0] = byte; // red
@@ -1241,14 +1241,14 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
                 );
             }
             else
-                return PANIC(PARAM(DUAL));
+                panic (PARAM(DUAL));
             break;
 
           case EXT_SYM_ALPHA:
             if (Is_Integer(poke)) {
                 REBINT n = VAL_INT32(poke);
                 if (n < 0 || n > 255)
-                    return PANIC(Error_Out_Of_Range(poke));
+                    panic (Error_Out_Of_Range(poke));
 
                 Fill_Alpha_Line(src, cast(Byte, n), len);
             }
@@ -1258,17 +1258,17 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
                 Bin_To_Alpha(src, len, data, size);
             }
             else
-                return PANIC(PARAM(DUAL));
+                panic (PARAM(DUAL));
             break;
 
           default:
-            panic (picker);
+            abrupt_panic (picker);
         }
         return NO_WRITEBACK_NEEDED;
     }
 
     if (not Adjust_Image_Pick_Index_Is_Valid(&index, image, picker))
-        panic (Error_Out_Of_Range(picker));
+        abrupt_panic (Error_Out_Of_Range(picker));
 
     if (Is_Tuple(poke)) { // set whole pixel
         Set_Pixel_Tuple(VAL_IMAGE_AT_HEAD(image, index), poke);
@@ -1288,7 +1288,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
     else if (Is_Rune_And_Is_Char(poke))
         alpha = Rune_Known_Single_Codepoint(poke);
     else
-        return PANIC(Error_Out_Of_Range(poke));
+        panic (Error_Out_Of_Range(poke));
 
     Byte* dp = VAL_IMAGE_AT_HEAD(image, index);
     dp[3] = alpha;
