@@ -489,16 +489,16 @@ static void Mold_Image_Data(Molder* mo, const Element* value)
     REBLEN num_pixels = VAL_IMAGE_LEN_AT(value); // # from index to tail
     const Byte* rgba = VAL_IMAGE_AT(value);
 
-    Append_Ascii(mo->string, " #{");
+    Append_Ascii(mo->strand, " #{");
 
     REBLEN i;
     for (i = 0; i < num_pixels; ++i, rgba += 4) {
         if ((i % 10) == 0)
-            Append_Codepoint(mo->string, LF);
+            Append_Codepoint(mo->strand, LF);
         Form_RGBA(mo, rgba);
     }
 
-    Append_Ascii(mo->string, "\n}");
+    Append_Ascii(mo->strand, "\n}");
 }
 
 
@@ -880,9 +880,9 @@ IMPLEMENT_GENERIC(MOLDIFY, Is_Image)
     UNUSED(form); // no difference between MOLD and FORM at this time
 
     Begin_Non_Lexical_Mold(mo, cell);
-    Append_Int(mo->string, VAL_IMAGE_WIDTH(cell));
-    Append_Ascii(mo->string, "x");
-    Append_Int(mo->string, VAL_IMAGE_HEIGHT(cell));
+    Append_Int(mo->strand, VAL_IMAGE_WIDTH(cell));
+    Append_Ascii(mo->strand, "x");
+    Append_Int(mo->strand, VAL_IMAGE_HEIGHT(cell));
     End_Non_Lexical_Mold(mo);
 
     return TRIPWIRE;
