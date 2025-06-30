@@ -56,7 +56,7 @@
 
 INLINE Image* VAL_IMAGE(const Cell* v) {
     assert(Is_Image(v));
-    return cast(Image*, CELL_NODE1(v));
+    return cast(Image*, CELL_PAYLOAD_1(v));
 }
 
 #define VAL_IMAGE_BIN(v)        cast(Element*, Stub_Cell(VAL_IMAGE(v)))
@@ -98,14 +98,14 @@ INLINE Element* Init_Image(
     REBLEN width,
     REBLEN height
 ){
-    assert(Is_Node_Managed(bin));
+    assert(Is_Base_Managed(bin));
 
     Array* blob_holder = cast(Array*, Prep_Stub(
-        FLAG_FLAVOR(CELLS)
-            | NODE_FLAG_MANAGED
-            | (not STUB_FLAG_LINK_NODE_NEEDS_MARK)  // width, integer
-            | (not STUB_FLAG_MISC_NODE_NEEDS_MARK)  // height, integer
-            | (not STUB_FLAG_INFO_NODE_NEEDS_MARK),  // info, not used ATM
+        FLAG_FLAVOR(FLAVOR_CELLS)
+            | BASE_FLAG_MANAGED
+            | (not STUB_FLAG_LINK_NEEDS_MARK)  // width, integer
+            | (not STUB_FLAG_MISC_NEEDS_MARK)  // height, integer
+            | (not STUB_FLAG_INFO_NEEDS_MARK),  // info, not used ATM
         Alloc_Stub()
     ));
     Init_Blob(Force_Erase_Cell(Stub_Cell(blob_holder)), bin);
@@ -113,11 +113,11 @@ INLINE Element* Init_Image(
     Reset_Extended_Cell_Header_Noquote(
         out,
         EXTRA_HEART_IMAGE,
-        (not CELL_FLAG_DONT_MARK_NODE1)  // image stub needs mark
-            | CELL_FLAG_DONT_MARK_NODE2  // index shouldn't be marked
+        (not CELL_FLAG_DONT_MARK_PAYLOAD_1)  // image stub needs mark
+            | CELL_FLAG_DONT_MARK_PAYLOAD_2  // index shouldn't be marked
     );
 
-    CELL_NODE1(out) = blob_holder;
+    CELL_PAYLOAD_1(out) = blob_holder;
 
     VAL_IMAGE_WIDTH(out) = width;  // see why this isn't put on bin...
     VAL_IMAGE_HEIGHT(out) = height;  // (...it would corrupt shared series!)
