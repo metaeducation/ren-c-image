@@ -873,6 +873,9 @@ IMPLEMENT_GENERIC(MOLDIFY, Is_Image)
 {
     INCLUDE_PARAMS_OF_MOLDIFY;
 
+    UNUSED(Mold_Image_Data);  // suppress compiler warning
+    UNUSED(Image_Has_Alpha);
+
     Element* cell = Element_ARG(ELEMENT);
     Molder* mo = Cell_Handle_Pointer(Molder, ARG(MOLDER));
     bool form = Bool_ARG(FORM);
@@ -981,6 +984,8 @@ IMPLEMENT_GENERIC(OLDGENERIC, Is_Image)
         return COPY(image); }
 
       case SYM_CLEAR:
+        UNUSED(Clear_Image);
+
         if (index < tail) {
             Set_Flex_Len(
                 Cell_Binary_Ensure_Mutable(VAL_IMAGE_BIN(image)),
