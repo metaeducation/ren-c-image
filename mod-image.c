@@ -1128,7 +1128,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
     INCLUDE_PARAMS_OF_TWEAK_P;
 
     Element* image = Element_ARG(LOCATION);
-    const Value* picker = Element_ARG(PICKER);
+    const Value* picker = ARG(PICKER);
 
     REBINT index = cast(REBINT, VAL_IMAGE_POS(image));
     REBINT len = VAL_IMAGE_LEN_HEAD(image) - index;
@@ -1322,7 +1322,7 @@ IMPLEMENT_GENERIC(HEAD_Q, Is_Image)
     INCLUDE_PARAMS_OF_HEAD_Q;
 
     Element* image = Element_ARG(ELEMENT);
-    return Init_Logic(OUT, VAL_IMAGE_POS(image) == 0);
+    return LOGIC(VAL_IMAGE_POS(image) == 0);
 }
 
 
@@ -1331,7 +1331,7 @@ IMPLEMENT_GENERIC(TAIL_Q, Is_Image)
     INCLUDE_PARAMS_OF_TAIL_Q;
 
     Element* image = Element_ARG(ELEMENT);
-    return Init_Logic(OUT, VAL_IMAGE_POS(image) >= VAL_IMAGE_LEN_HEAD(image));
+    return LOGIC(VAL_IMAGE_POS(image) >= VAL_IMAGE_LEN_HEAD(image));
 }
 
 
