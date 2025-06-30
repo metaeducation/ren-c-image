@@ -142,7 +142,7 @@ static void Fill_Alpha_Rect(
 static Option(const Element*) Find_Non_Tuple_In_Array(const Element* any_array)
 {
     const Element* tail;
-    const Element* v = Cell_List_At(&tail, any_array);
+    const Element* v = List_At(&tail, any_array);
 
     for (; v != tail; ++v)
         if (not Is_Block(v))
@@ -174,7 +174,7 @@ IMPLEMENT_GENERIC(MAKE, Is_Image) {
 
     if (Is_Block(spec)) {  // make image! [size rgba index]
         const Element* tail;
-        const Element* item = Cell_List_At(&tail, spec);
+        const Element* item = List_At(&tail, spec);
         if (item == tail or not Is_Pair(item))
             return PANIC(PARAM(DEF));
 
@@ -199,10 +199,10 @@ IMPLEMENT_GENERIC(MAKE, Is_Image) {
             // components, the value of a system one is to use the data
             // directly as-is...so Ren-C only supports RGBA.
 
-            if (VAL_INDEX(item) != 0)
+            if (Series_Index(item) != 0)
                 return FAIL("MAKE IMAGE! w/BINARY! must have binary at HEAD");
 
-            if (Cell_Series_Len_Head(item) != cast(REBLEN, w * h * 4))
+            if (Series_Len_Head(item) != cast(REBLEN, w * h * 4))
                 return FAIL("MAKE IMAGE! w/BINARY! needs RGBA pixels for size");
 
             Init_Image(OUT, Cell_Binary(item), w, h);
@@ -241,7 +241,7 @@ IMPLEMENT_GENERIC(MAKE, Is_Image) {
             Byte* ip = VAL_IMAGE_HEAD(OUT);  // image pointer
 
             Tuples_To_RGBA(
-                ip, w * h, Cell_List_Item_At(item), Cell_Series_Len_At(item)
+                ip, w * h, List_Item_At(item), Series_Len_At(item)
             );
         }
         else
@@ -335,7 +335,7 @@ static void Reset_Height(Element* value)
 {
     Element* binary = VAL_IMAGE_BIN(value);
     REBLEN w = VAL_IMAGE_WIDTH(value);
-    VAL_IMAGE_HEIGHT(value) = w ? ((Cell_Series_Len_Head(binary) / w) / 4) : 0;
+    VAL_IMAGE_HEIGHT(value) = w ? ((Series_Len_Head(binary) / w) / 4) : 0;
 }
 
 
@@ -618,7 +618,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
             if (Is_Integer(ARG(PART))) {
                 part = VAL_INT32(ARG(PART));
             } else if (Is_Blob(ARG(PART))) {
-                part = (VAL_INDEX(ARG(PART)) - VAL_INDEX(arg)) / 4;
+                part = (Series_Index(ARG(PART)) - Series_Index(arg)) / 4;
             } else
                 panic (PARAM(PART));
             part = MAX(part, 0);
@@ -672,10 +672,10 @@ static Bounce Modify_Image(Level* level_, SymId sym)
                 part = part_y * w;
         }
         else if (Is_Blob(arg)) {
-            part = Cell_Series_Len_At(arg) / 4;
+            part = Series_Len_At(arg) / 4;
         }
         else if (Is_Block(arg)) {
-            part = Cell_Series_Len_At(arg);
+            part = Series_Len_At(arg);
         }
         else if (!Is_Integer(arg) && !Is_Block(arg))
             return PANIC(PARAM(VALUE));
@@ -689,7 +689,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
         //length in 'pixels'
         RESET_IMAGE(Binary_Head(bin) + (index * 4), dup * part);
         Reset_Height(value);
-        tail = Cell_Series_Len_Head(value);
+        tail = Series_Len_Head(value);
         only = false;
     }
     ip = VAL_IMAGE_HEAD(value);
@@ -724,7 +724,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
     }
     else if (Is_Blob(arg)) {
         Size size;
-        const Byte* data = Cell_Blob_Size_At(&size, arg);
+        const Byte* data = Blob_Size_At(&size, arg);
         if (part > cast(REBINT, size))
             part = size;  // clip it
         ip += index * 4;
@@ -735,7 +735,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
         if (index + part > tail) part = tail - index;  // clip it
         ip += index * 4;
         for (; dup > 0; dup--, ip += part * 4)
-            Tuples_To_RGBA(ip, part, Cell_List_Item_At(arg), part);
+            Tuples_To_RGBA(ip, part, List_Item_At(arg), part);
     }
     else
         return PANIC(PARAM(VALUE));
@@ -1096,7 +1096,7 @@ IMPLEMENT_GENERIC(COPY, Is_Image)
         w = MAX(w, 0);
         h = MAX(h, 0);
         REBINT diff = MIN(
-            Cell_Series_Len_Head(VAL_IMAGE_BIN(image)),
+            Series_Len_Head(VAL_IMAGE_BIN(image)),
             VAL_IMAGE_POS(image)
         );
         diff = MAX(0, diff);
@@ -1149,7 +1149,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
   handle_pick: { /////////////////////////////////////////////////////////////
 
     if (Is_Word(picker)) {
-        switch (Cell_Word_Id(picker)) {
+        switch (Word_Id(picker)) {
           case SYM_SIZE:
             Init_Pair(OUT, VAL_IMAGE_WIDTH(image), VAL_IMAGE_HEIGHT(image));
             goto adjust_index;
@@ -1197,7 +1197,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
     Cell_Binary_Ensure_Mutable(VAL_IMAGE_BIN(image));
 
     if (Is_Word(picker)) {
-        switch (Cell_Word_Id(picker)) {
+        switch (Word_Id(picker)) {
           case SYM_SIZE:
             if (not Is_Pair(poke) or Cell_Pair_X(poke) == 0)
                 return PANIC(PARAM(DUAL));
@@ -1206,7 +1206,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
             VAL_IMAGE_HEIGHT(image) = MIN(
                 Cell_Pair_Y(poke),
                 cast(REBINT,
-                    Cell_Series_Len_Head(VAL_IMAGE_BIN(image))
+                    Series_Len_Head(VAL_IMAGE_BIN(image))
                     / Cell_Pair_X(poke)
                 )
             );
@@ -1285,8 +1285,8 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
     ){
         alpha = VAL_INT32(poke);
     }
-    else if (IS_CHAR(poke))
-        alpha = Cell_Codepoint(poke);
+    else if (Is_Rune_And_Is_Char(poke))
+        alpha = Rune_Known_Single_Codepoint(poke);
     else
         return PANIC(Error_Out_Of_Range(poke));
 
