@@ -1,4 +1,4 @@
-; %image.test.reb
+; %image.test.r
 ;
 ; !!! Originally IMAGE! was a built-in datatype.  It had many semantic
 ; problems of not acting like a series, and Ren-C tried to focus on the

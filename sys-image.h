@@ -100,7 +100,7 @@ INLINE Element* Init_Image(
 ){
     assert(Is_Base_Managed(bin));
 
-    Array* blob_holder = cast(Array*, Prep_Stub(
+    Array* blob_holder = require (nocast Prep_Stub(
         FLAG_FLAVOR(FLAVOR_CELLS)
             | BASE_FLAG_MANAGED
             | (not STUB_FLAG_LINK_NEEDS_MARK)  // width, integer
@@ -148,7 +148,7 @@ INLINE Cell* Init_Image_Black_Opaque(
     Size size = (w * h) * 4;  // RGBA pixels, 4 bytes each
     Binary* bin = Make_Binary(size);
     Term_Binary_Len(bin, size);
-    Manage_Flex(bin);
+    Manage_Stub(bin);
 
     RESET_IMAGE(Binary_Head(bin), (w * h));  // length in 'pixels'
 

@@ -236,7 +236,7 @@ IMPLEMENT_GENERIC(MAKE, Is_Image) {
 
             Option(const Element*) non_tuple = Find_Non_Tuple_In_Array(item);
             if (non_tuple)
-                abrupt_panic (Error_Bad_Value(unwrap(non_tuple)));
+                panic (Error_Bad_Value(unwrap(non_tuple)));
 
             Byte* ip = VAL_IMAGE_HEAD(OUT);  // image pointer
 
@@ -489,7 +489,7 @@ static void Mold_Image_Data(Molder* mo, const Element* value)
     REBLEN num_pixels = VAL_IMAGE_LEN_AT(value); // # from index to tail
     const Byte* rgba = VAL_IMAGE_AT(value);
 
-    Append_Ascii(mo->strand, " #{");
+    required (Append_Ascii(mo->strand, " #{"));
 
     REBLEN i;
     for (i = 0; i < num_pixels; ++i, rgba += 4) {
@@ -498,7 +498,7 @@ static void Mold_Image_Data(Molder* mo, const Element* value)
         Form_RGBA(mo, rgba);
     }
 
-    Append_Ascii(mo->strand, "\n}");
+    required (Append_Ascii(mo->strand, "\n}"));
 }
 
 
@@ -553,7 +553,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
     Element* arg = Element_ARG(VALUE);
 
     if (Bool_ARG(LINE))
-        abrupt_panic (Error_Bad_Refines_Raw());
+        panic (Error_Bad_Refines_Raw());
 
     Binary* bin = Cell_Binary_Ensure_Mutable(VAL_IMAGE_BIN(value));
 
@@ -578,7 +578,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
     if (Is_Block(arg)) {
         Option(const Element*) non_tuple = Find_Non_Tuple_In_Array(arg);
         if (non_tuple)
-            abrupt_panic (Error_Bad_Value(unwrap non_tuple));
+            panic (Error_Bad_Value(unwrap non_tuple));
     }
 
     REBINT dup = 1;
@@ -620,7 +620,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
             } else if (Is_Blob(ARG(PART))) {
                 part = (Series_Index(ARG(PART)) - Series_Index(arg)) / 4;
             } else
-                abrupt_panic (PARAM(PART));
+                panic (PARAM(PART));
             part = MAX(part, 0);
         }
         else if (Is_Image(arg)) {
@@ -630,7 +630,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
             }
             else if (Is_Image(ARG(PART))) {
                 if (VAL_IMAGE_WIDTH(ARG(PART)) == 0)
-                    abrupt_panic (PARAM(PART));
+                    panic (PARAM(PART));
 
                 part_x = VAL_IMAGE_POS(ARG(PART)) - VAL_IMAGE_POS(arg);
                 part_y = part_x / VAL_IMAGE_WIDTH(ARG(PART));
@@ -701,7 +701,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
         if (Is_Integer(arg)) { // Alpha channel
             REBINT arg_int = VAL_INT32(arg);
             if ((arg_int < 0) || (arg_int > 255))
-                abrupt_panic (Error_Out_Of_Range(arg));
+                panic (Error_Out_Of_Range(arg));
 
             if (Is_Pair(ARG(DUP)))  // rectangular fill
                 Fill_Alpha_Rect(
@@ -781,7 +781,7 @@ static Bounce Find_Image(Level* level_)
         or Bool_ARG(MATCH)
         or Bool_ARG(PART)
     ){
-        abrupt_panic (Error_Bad_Refines_Raw());
+        panic (Error_Bad_Refines_Raw());
     }
 
     bool only = false;
@@ -873,8 +873,8 @@ IMPLEMENT_GENERIC(MOLDIFY, Is_Image)
 {
     INCLUDE_PARAMS_OF_MOLDIFY;
 
-    UNUSED(Mold_Image_Data);  // suppress compiler warning
-    UNUSED(Image_Has_Alpha);
+    UNUSED(&Mold_Image_Data);  // suppress compiler warning
+    UNUSED(&Image_Has_Alpha);
 
     Element* cell = Element_ARG(ELEMENT);
     Molder* mo = Cell_Handle_Pointer(Molder, ARG(MOLDER));
@@ -884,7 +884,7 @@ IMPLEMENT_GENERIC(MOLDIFY, Is_Image)
 
     Begin_Non_Lexical_Mold(mo, cell);
     Append_Int(mo->strand, VAL_IMAGE_WIDTH(cell));
-    Append_Ascii(mo->strand, "x");
+    required (Append_Ascii(mo->strand, "x"));
     Append_Int(mo->strand, VAL_IMAGE_HEIGHT(cell));
     End_Non_Lexical_Mold(mo);
 
@@ -909,7 +909,7 @@ static bool Adjust_Image_Pick_Index_Is_Valid(
     else if (Is_Decimal(picker))
         n = cast(REBINT, VAL_DECIMAL(picker));
     else
-        abrupt_panic (picker);
+        panic (picker);
 
     *index += n;
     if (n > 0)
@@ -944,7 +944,7 @@ IMPLEMENT_GENERIC(OLDGENERIC, Is_Image)
 
     Option(SymId) id = Symbol_Id(Level_Verb(LEVEL));
 
-    switch (id) {
+    switch (maybe id) {
       case SYM_BITWISE_NOT:
         Make_Complemented_Image(OUT, image);
         return OUT;
@@ -984,7 +984,7 @@ IMPLEMENT_GENERIC(OLDGENERIC, Is_Image)
         return COPY(image); }
 
       case SYM_CLEAR:
-        UNUSED(Clear_Image);
+        UNUSED(&Clear_Image);
 
         if (index < tail) {
             Set_Flex_Len(
@@ -1036,7 +1036,7 @@ IMPLEMENT_GENERIC(OLDGENERIC, Is_Image)
         break;
     }
 
-    return UNHANDLED;
+    panic (UNHANDLED);
 }
 
 
@@ -1154,7 +1154,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
   handle_pick: { /////////////////////////////////////////////////////////////
 
     if (Is_Word(picker)) {
-        switch (Word_Id(picker)) {
+        switch (maybe Word_Id(picker)) {
           case SYM_SIZE:
             Init_Pair(OUT, VAL_IMAGE_WIDTH(image), VAL_IMAGE_HEIGHT(image));
             goto adjust_index;
@@ -1202,7 +1202,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
     Cell_Binary_Ensure_Mutable(VAL_IMAGE_BIN(image));
 
     if (Is_Word(picker)) {
-        switch (Word_Id(picker)) {
+        switch (maybe Word_Id(picker)) {
           case SYM_SIZE:
             if (not Is_Pair(poke) or Cell_Pair_X(poke) == 0)
                 panic (PARAM(DUAL));
@@ -1226,7 +1226,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
             else if (Is_Integer(poke)) {
                 REBINT byte = VAL_INT32(poke);
                 if (byte < 0 or byte > 255)
-                    abrupt_panic (Error_Out_Of_Range(poke));
+                    panic (Error_Out_Of_Range(poke));
 
                 Byte pixel[4];
                 pixel[0] = byte; // red
@@ -1267,13 +1267,13 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
             break;
 
           default:
-            abrupt_panic (picker);
+            panic (picker);
         }
         return NO_WRITEBACK_NEEDED;
     }
 
     if (not Adjust_Image_Pick_Index_Is_Valid(&index, image, picker))
-        abrupt_panic (Error_Out_Of_Range(picker));
+        panic (Error_Out_Of_Range(picker));
 
     if (Is_Tuple(poke)) { // set whole pixel
         Set_Pixel_Tuple(VAL_IMAGE_AT_HEAD(image, index), poke);
