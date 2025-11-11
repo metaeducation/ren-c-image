@@ -108,7 +108,7 @@
 )
 (
     a-value: make image! 0x0
-    same? :a-value a-value
+    same? a-value a-value
 )
 
 (

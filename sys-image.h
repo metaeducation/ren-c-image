@@ -100,7 +100,8 @@ INLINE Element* Init_Image(
 ){
     assert(Is_Base_Managed(bin));
 
-    Array* blob_holder = require (nocast Prep_Stub(
+    require (
+      Array* blob_holder = u_downcast Prep_Stub(
         FLAG_FLAVOR(FLAVOR_CELLS)
             | BASE_FLAG_MANAGED
             | (not STUB_FLAG_LINK_NEEDS_MARK)  // width, integer

@@ -342,8 +342,10 @@ static void Reset_Height(Element* value)
 //
 //  Init_Tuple_From_Pixel: C
 //
-static Element* Init_Tuple_From_Pixel(Sink(Element) out, const Byte* dp)
-{
+static Result(Element*) Init_Tuple_From_Pixel(
+    Sink(Element) out,
+    const Byte* dp
+){
     return Init_Tuple_Bytes(out, dp, 4);
 }
 
@@ -489,16 +491,21 @@ static void Mold_Image_Data(Molder* mo, const Element* value)
     REBLEN num_pixels = VAL_IMAGE_LEN_AT(value); // # from index to tail
     const Byte* rgba = VAL_IMAGE_AT(value);
 
-    required (Append_Ascii(mo->strand, " #{"));
+    require (
+      Append_Ascii(mo->strand, " #{")
+    );
 
     REBLEN i;
     for (i = 0; i < num_pixels; ++i, rgba += 4) {
         if ((i % 10) == 0)
             Append_Codepoint(mo->strand, LF);
-        Form_RGBA(mo, rgba);
+        require (
+          Form_RGBA(mo, rgba)
+        );
     }
-
-    required (Append_Ascii(mo->strand, "\n}"));
+    require (
+      Append_Ascii(mo->strand, "\n}")
+    );
 }
 
 
@@ -683,8 +690,12 @@ static Bounce Modify_Image(Level* level_, SymId sym)
 
     // Expand image data if necessary:
     if (sym == SYM_INSERT) {
-        if (index > tail) index = tail;
-        Expand_Flex(bin, index, dup * part);
+        if (index > tail)
+            index = tail;
+
+        require (
+          Expand_Flex_At_Index_And_Update_Used(bin, index, dup * part)
+        );
 
         //length in 'pixels'
         RESET_IMAGE(Binary_Head(bin) + (index * 4), dup * part);
@@ -876,16 +887,22 @@ IMPLEMENT_GENERIC(MOLDIFY, Is_Image)
     UNUSED(&Mold_Image_Data);  // suppress compiler warning
     UNUSED(&Image_Has_Alpha);
 
-    Element* cell = Element_ARG(ELEMENT);
+    Element* cell = Element_ARG(VALUE);
     Molder* mo = Cell_Handle_Pointer(Molder, ARG(MOLDER));
     bool form = Bool_ARG(FORM);
 
     UNUSED(form); // no difference between MOLD and FORM at this time
 
     Begin_Non_Lexical_Mold(mo, cell);
-    Append_Int(mo->strand, VAL_IMAGE_WIDTH(cell));
-    required (Append_Ascii(mo->strand, "x"));
-    Append_Int(mo->strand, VAL_IMAGE_HEIGHT(cell));
+    require (
+      Append_Int(mo->strand, VAL_IMAGE_WIDTH(cell))
+    );
+    require (
+      Append_Ascii(mo->strand, "x")
+    );
+    require (
+      Append_Int(mo->strand, VAL_IMAGE_HEIGHT(cell))
+    );
     End_Non_Lexical_Mold(mo);
 
     return TRIPWIRE;
@@ -944,7 +961,7 @@ IMPLEMENT_GENERIC(OLDGENERIC, Is_Image)
 
     Option(SymId) id = Symbol_Id(Level_Verb(LEVEL));
 
-    switch (maybe id) {
+    switch (opt id) {
       case SYM_BITWISE_NOT:
         Make_Complemented_Image(OUT, image);
         return OUT;
@@ -1019,7 +1036,7 @@ IMPLEMENT_GENERIC(OLDGENERIC, Is_Image)
 
         index = cast(REBINT, VAL_IMAGE_POS(image));
         if (index < tail and len != 0) {
-            Remove_Flex_Units(bin, index, len);
+            Remove_Flex_Units_And_Update_Used(bin, index, len);
         }
         Reset_Height(image);
         return COPY(image); }
@@ -1154,7 +1171,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
   handle_pick: { /////////////////////////////////////////////////////////////
 
     if (Is_Word(picker)) {
-        switch (maybe Word_Id(picker)) {
+        switch (opt Word_Id(picker)) {
           case SYM_SIZE:
             Init_Pair(OUT, VAL_IMAGE_WIDTH(image), VAL_IMAGE_HEIGHT(image));
             goto adjust_index;
@@ -1183,8 +1200,11 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
 
   adjust_index:
 
-    if (Adjust_Image_Pick_Index_Is_Valid(&index, image, picker))
-        Init_Tuple_From_Pixel(OUT, VAL_IMAGE_AT_HEAD(image, index));
+    if (Adjust_Image_Pick_Index_Is_Valid(&index, image, picker)) {
+        require (
+          Init_Tuple_From_Pixel(OUT, VAL_IMAGE_AT_HEAD(image, index))
+        );
+    }
     else
         return DUAL_SIGNAL_NULL_ABSENT;
 
@@ -1202,7 +1222,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
     Cell_Binary_Ensure_Mutable(VAL_IMAGE_BIN(image));
 
     if (Is_Word(picker)) {
-        switch (maybe Word_Id(picker)) {
+        switch (opt Word_Id(picker)) {
           case SYM_SIZE:
             if (not Is_Pair(poke) or Cell_Pair_X(poke) == 0)
                 panic (PARAM(DUAL));
@@ -1306,7 +1326,7 @@ IMPLEMENT_GENERIC(HEAD_OF, Is_Image)
 {
     INCLUDE_PARAMS_OF_TAIL_OF;
 
-    Element* image = Element_ARG(ELEMENT);
+    Element* image = Element_ARG(VALUE);
     VAL_IMAGE_POS(image) = 0;
     return COPY(image);
 }
@@ -1316,7 +1336,7 @@ IMPLEMENT_GENERIC(TAIL_OF, Is_Image)
 {
     INCLUDE_PARAMS_OF_TAIL_OF;
 
-    Element* image = Element_ARG(ELEMENT);
+    Element* image = Element_ARG(VALUE);
     VAL_IMAGE_POS(image) = VAL_IMAGE_LEN_HEAD(image);
     return COPY(image);
 }
@@ -1326,7 +1346,7 @@ IMPLEMENT_GENERIC(HEAD_Q, Is_Image)
 {
     INCLUDE_PARAMS_OF_HEAD_Q;
 
-    Element* image = Element_ARG(ELEMENT);
+    Element* image = Element_ARG(VALUE);
     return LOGIC(VAL_IMAGE_POS(image) == 0);
 }
 
@@ -1335,7 +1355,7 @@ IMPLEMENT_GENERIC(TAIL_Q, Is_Image)
 {
     INCLUDE_PARAMS_OF_TAIL_Q;
 
-    Element* image = Element_ARG(ELEMENT);
+    Element* image = Element_ARG(VALUE);
     return LOGIC(VAL_IMAGE_POS(image) >= VAL_IMAGE_LEN_HEAD(image));
 }
 
@@ -1367,7 +1387,7 @@ IMPLEMENT_GENERIC(INDEX_OF, Is_Image)
 {
     INCLUDE_PARAMS_OF_INDEX_OF;
 
-    Element* image = Element_ARG(ELEMENT);
+    Element* image = Element_ARG(VALUE);
     return Init_Integer(OUT, VAL_IMAGE_POS(image) + 1);
 }
 
@@ -1376,7 +1396,7 @@ IMPLEMENT_GENERIC(LENGTH_OF, Is_Image)
 {
     INCLUDE_PARAMS_OF_LENGTH_OF;
 
-    Element* image = Element_ARG(ELEMENT);
+    Element* image = Element_ARG(VALUE);
     REBINT index = VAL_IMAGE_POS(image);
     REBINT tail = VAL_IMAGE_LEN_HEAD(image);
 
