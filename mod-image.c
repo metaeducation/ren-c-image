@@ -1365,7 +1365,7 @@ IMPLEMENT_GENERIC(TAIL_Q, Is_Image)
 //
 //  "Get current index into an IMAGE! value as a pair!"
 //
-//      return: [null? pair!]
+//      return: [<null> pair!]
 //      image [<opt-out> image!]
 //  ]
 //
