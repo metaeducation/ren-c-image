@@ -905,7 +905,7 @@ IMPLEMENT_GENERIC(MOLDIFY, Is_Image)
     );
     End_Non_Lexical_Mold(mo);
 
-    return TRIPWIRE;
+    return TRASH;
 }
 
 
@@ -1424,14 +1424,14 @@ IMPLEMENT_GENERIC(BYTES_OF, Is_Image)
 //
 //  "Startup IMAGE! Extension"
 //
-//      return: []
+//      return: ~
 //  ]
 //
 DECLARE_NATIVE(STARTUP_P)
 {
     INCLUDE_PARAMS_OF_STARTUP_P;
 
-    return TRIPWIRE;
+    return TRASH;
 }
 
 
@@ -1440,12 +1440,12 @@ DECLARE_NATIVE(STARTUP_P)
 //
 //  "Shutdown IMAGE! Extension"
 //
-//      return: []
+//      return: ~
 //  ]
 //
 DECLARE_NATIVE(SHUTDOWN_P)
 {
     INCLUDE_PARAMS_OF_SHUTDOWN_P;
 
-    return TRIPWIRE;
+    return TRASH;
 }
