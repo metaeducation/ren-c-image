@@ -912,7 +912,7 @@ IMPLEMENT_GENERIC(MOLDIFY, Is_Image)
 static bool Adjust_Image_Pick_Index_Is_Valid(
     REBINT *index, // gets adjusted
     const Element* value, // image
-    const Value* picker
+    const Stable* picker
 ) {
     REBINT n;
     if (Is_Pair(picker)) {
@@ -968,7 +968,7 @@ IMPLEMENT_GENERIC(OLDGENERIC, Is_Image)
 
       case SYM_SKIP:
       case SYM_AT: {
-        Value* arg = ARG_N(2);
+        Stable* arg = ARG_N(2);
 
         // This logic is somewhat complicated by the fact that INTEGER args use
         // base-1 indexing, but PAIR args use base-0.
@@ -1020,7 +1020,7 @@ IMPLEMENT_GENERIC(OLDGENERIC, Is_Image)
 
         REBINT len;
         if (Bool_ARG(PART)) {
-            Value *val = ARG(PART);
+            Stable* val = ARG(PART);
             if (Is_Integer(val)) {
                 len = VAL_INT32(val);
             }
@@ -1150,7 +1150,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
     INCLUDE_PARAMS_OF_TWEAK_P;
 
     Element* image = Element_ARG(LOCATION);
-    const Value* picker = ARG(PICKER);
+    const Stable* picker = ARG(PICKER);
 
     REBINT index = cast(REBINT, VAL_IMAGE_POS(image));
     REBINT len = VAL_IMAGE_LEN_HEAD(image) - index;
@@ -1158,7 +1158,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
 
     Byte* src = VAL_IMAGE_AT(image);
 
-    Value* dual = ARG(DUAL);
+    Stable* dual = ARG(DUAL);
     if (Not_Lifted(dual)) {
         if (Is_Dual_Nulled_Pick_Signal(dual))
             goto handle_pick;
