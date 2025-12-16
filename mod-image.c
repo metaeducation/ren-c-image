@@ -305,7 +305,7 @@ IMPLEMENT_GENERIC(EQUAL_Q, Is_Image)
 {
     INCLUDE_PARAMS_OF_EQUAL_Q;
 
-    UNUSED(Bool_ARG(RELAX));
+    UNUSED(ARG(RELAX));
 
     Element* a = Element_ARG(VALUE1);
     Element* b = Element_ARG(VALUE2);
@@ -550,16 +550,16 @@ static Bounce Modify_Image(Level* level_, SymId sym)
     Element* value = Element_ARG(SERIES);  // !!! confusing name
     Cell_Binary_Ensure_Mutable(VAL_IMAGE_BIN(value));
 
-    if (Is_Nulled(ARG(VALUE))) {  // void
+    if (not ARG(VALUE)) {  // void
         if (sym == SYM_APPEND)  // append returns head position
             VAL_IMAGE_POS(value) = 0;
         return COPY(value);  // don't panic on read only if it would be noop
     }
-    if (Is_Antiform(ARG(VALUE)))
+    if (Is_Antiform(unwrap ARG(VALUE)))
         panic (PARAM(VALUE));
     Element* arg = Element_ARG(VALUE);
 
-    if (Bool_ARG(LINE))
+    if (ARG(LINE))
         panic (Error_Bad_Refines_Raw());
 
     Binary* bin = Cell_Binary_Ensure_Mutable(VAL_IMAGE_BIN(value));
@@ -592,16 +592,17 @@ static Bounce Modify_Image(Level* level_, SymId sym)
     REBINT dup_x = 0;
     REBINT dup_y = 0;
 
-    if (Bool_ARG(DUP)) {  // "it specifies fill size"
-        if (Is_Integer(ARG(DUP))) {
-            dup = VAL_INT32(ARG(DUP));
+    if (ARG(DUP)) {  // "it specifies fill size"
+        Stable* d = unwrap ARG(DUP);
+        if (Is_Integer(d)) {
+            dup = VAL_INT32(d);
             dup = MAX(dup, 0);
             if (dup == 0)
                 return COPY(value);
         }
-        else if (Is_Pair(ARG(DUP))) {  // rectangular dup
-            dup_x = Cell_Pair_X(ARG(DUP));
-            dup_y = Cell_Pair_Y(ARG(DUP));
+        else if (Is_Pair(d)) {  // rectangular dup
+            dup_x = Cell_Pair_X(d);
+            dup_y = Cell_Pair_Y(d);
             dup_x = MAX(dup_x, 0);
             dup_x = MIN(dup_x, cast(REBINT, w) - x);  // clip dup width
             dup_y = MAX(dup_y, 0);
@@ -620,34 +621,35 @@ static Bounce Modify_Image(Level* level_, SymId sym)
     REBINT part_x = 0;
     REBINT part_y = 0;
 
-    if (Bool_ARG(PART)) {  // only allowed when arg is a series
+    if (ARG(PART)) {  // only allowed when arg is a series
+        Stable* p = unwrap ARG(PART);
         if (Is_Blob(arg)) {
-            if (Is_Integer(ARG(PART))) {
-                part = VAL_INT32(ARG(PART));
-            } else if (Is_Blob(ARG(PART))) {
-                part = (Series_Index(ARG(PART)) - Series_Index(arg)) / 4;
+            if (Is_Integer(p)) {
+                part = VAL_INT32(p);
+            } else if (Is_Blob(p)) {
+                part = (Series_Index(p) - Series_Index(arg)) / 4;
             } else
                 panic (PARAM(PART));
             part = MAX(part, 0);
         }
         else if (Is_Image(arg)) {
-            if (Is_Integer(ARG(PART))) {
-                part = VAL_INT32(ARG(PART));
+            if (Is_Integer(p)) {
+                part = VAL_INT32(p);
                 part = MAX(part, 0);
             }
-            else if (Is_Image(ARG(PART))) {
-                if (VAL_IMAGE_WIDTH(ARG(PART)) == 0)
+            else if (Is_Image(p)) {
+                if (VAL_IMAGE_WIDTH(p) == 0)
                     panic (PARAM(PART));
 
-                part_x = VAL_IMAGE_POS(ARG(PART)) - VAL_IMAGE_POS(arg);
-                part_y = part_x / VAL_IMAGE_WIDTH(ARG(PART));
+                part_x = VAL_IMAGE_POS(p) - VAL_IMAGE_POS(arg);
+                part_y = part_x / VAL_IMAGE_WIDTH(p);
                 part_y = MAX(part_y, 1);
                 part_x = MIN(part_x, cast(REBINT, VAL_IMAGE_WIDTH(arg)));
                 goto len_compute;
             }
-            else if (Is_Pair(ARG(PART))) {
-                part_x = Cell_Pair_X(ARG(PART));
-                part_y = Cell_Pair_Y(ARG(PART));
+            else if (Is_Pair(p)) {
+                part_x = Cell_Pair_X(p);
+                part_y = Cell_Pair_Y(p);
             len_compute:
                 part_x = MAX(part_x, 0);
                 part_x = MIN(part_x, cast(REBINT, w) - x);  // clip part width
@@ -714,7 +716,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
             if ((arg_int < 0) || (arg_int > 255))
                 panic (Error_Out_Of_Range(arg));
 
-            if (Is_Pair(ARG(DUP)))  // rectangular fill
+            if (Is_Pair(unwrap ARG(DUP)))  // rectangular fill
                 Fill_Alpha_Rect(
                     ip, cast(Byte, arg_int), w, dup_x, dup_y
                 );
@@ -724,7 +726,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
         else if (Is_Block(arg)) {  // RGB
             Byte pixel[4];
             Set_Pixel_Tuple(pixel, arg);
-            if (Is_Pair(ARG(DUP)))  // rectangular fill
+            if (Is_Pair(unwrap ARG(DUP)))  // rectangular fill
                 Fill_Rect(ip, pixel, w, dup_x, dup_y, only);
             else
                 Fill_Line(ip, pixel, dup, only);
@@ -787,10 +789,10 @@ static Bounce Find_Image(Level* level_)
     // problem that archetype-based dispatch will need to address.
     //
     if (
-        Bool_ARG(CASE)
-        or Bool_ARG(SKIP)
-        or Bool_ARG(MATCH)
-        or Bool_ARG(PART)
+        ARG(CASE)
+        or ARG(SKIP)
+        or ARG(MATCH)
+        or ARG(PART)
     ){
         panic (Error_Bad_Refines_Raw());
     }
@@ -828,7 +830,7 @@ static Bounce Find_Image(Level* level_)
     assert((p - VAL_IMAGE_HEAD(image)) % 4 == 0);
 
     REBINT n = cast(REBLEN, (p - VAL_IMAGE_HEAD(image)) / 4);
-    if (Bool_ARG(MATCH)) {
+    if (ARG(MATCH)) {
         if (n != cast(REBINT, index)) {
             return nullptr;
         }
@@ -889,7 +891,7 @@ IMPLEMENT_GENERIC(MOLDIFY, Is_Image)
 
     Element* cell = Element_ARG(VALUE);
     Molder* mo = Cell_Handle_Pointer(Molder, ARG(MOLDER));
-    bool form = Bool_ARG(FORM);
+    bool form = did ARG(FORM);
 
     UNUSED(form); // no difference between MOLD and FORM at this time
 
@@ -1019,15 +1021,15 @@ IMPLEMENT_GENERIC(OLDGENERIC, Is_Image)
         Binary* bin = Cell_Binary_Ensure_Mutable(VAL_IMAGE_BIN(image));
 
         REBINT len;
-        if (Bool_ARG(PART)) {
-            Stable* val = ARG(PART);
-            if (Is_Integer(val)) {
-                len = VAL_INT32(val);
+        if (ARG(PART)) {
+            Stable* p = unwrap ARG(PART);
+            if (Is_Integer(p)) {
+                len = VAL_INT32(p);
             }
-            else if (Is_Image(val)) {
-                if (VAL_IMAGE_WIDTH(val) == 0)
+            else if (Is_Image(p)) {
+                if (VAL_IMAGE_WIDTH(p) == 0)
                     panic (PARAM(PART));
-                len = VAL_IMAGE_POS(val) - VAL_IMAGE_POS(image);
+                len = VAL_IMAGE_POS(p) - VAL_IMAGE_POS(image);
             }
             else
                 panic (PARAM(PART));
@@ -1087,10 +1089,10 @@ IMPLEMENT_GENERIC(COPY, Is_Image)
 
     Element* image = Element_ARG(VALUE);
 
-    if (Bool_ARG(DEEP))
+    if (ARG(DEEP))
         panic (Error_Bad_Refines_Raw());
 
-    if (not Bool_ARG(PART)) {
+    if (not ARG(PART)) {
         Copy_Image_Value(OUT, image, VAL_IMAGE_LEN_AT(image));
         return OUT;
     }
