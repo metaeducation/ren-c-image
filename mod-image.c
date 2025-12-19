@@ -153,12 +153,12 @@ static Option(const Element*) Find_Non_Tuple_In_Array(const Element* any_array)
 
 
 IMPLEMENT_GENERIC(MAKE, Is_Image) {
-    INCLUDE_PARAMS_OF_MAKE;  // spec [<opt-out> blank? pair! block!]
-    UNUSED(ARG(TYPE));
+    INCLUDE_PARAMS_OF_MAKE;  // spec [<opt-out> hole? pair! block!]
+    UNUSED(PARAM(TYPE));
 
     Element* spec = Element_ARG(DEF);
 
-    if (Is_Blank(spec)) {  // empty image (same as make image! [])
+    if (Is_Hole(spec)) {  // empty image (same as make image! [])
         Init_Image_Black_Opaque(OUT, 0, 0);
         return OUT;
     }
@@ -305,7 +305,7 @@ IMPLEMENT_GENERIC(EQUAL_Q, Is_Image)
 {
     INCLUDE_PARAMS_OF_EQUAL_Q;
 
-    UNUSED(ARG(RELAX));
+    UNUSED(PARAM(RELAX));
 
     Element* a = Element_ARG(VALUE1);
     Element* b = Element_ARG(VALUE2);
@@ -1016,7 +1016,6 @@ IMPLEMENT_GENERIC(OLDGENERIC, Is_Image)
 
       case SYM_REMOVE: {
         INCLUDE_PARAMS_OF_REMOVE;
-        UNUSED(PARAM(SERIES));
 
         Binary* bin = Cell_Binary_Ensure_Mutable(VAL_IMAGE_BIN(image));
 
