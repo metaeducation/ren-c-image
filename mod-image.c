@@ -564,7 +564,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
 
     Binary* bin = Cell_Binary_Ensure_Mutable(VAL_IMAGE_BIN(value));
 
-    REBLEN index = VAL_IMAGE_POS(value);
+    Index index = VAL_IMAGE_POS(value);
     REBLEN tail = VAL_IMAGE_LEN_HEAD(value);
     Byte* ip;
 
@@ -776,7 +776,7 @@ static Bounce Find_Image(Level* level_)
 
     Element* image = Element_ARG(SERIES);
     Element* pattern = Element_ARG(PATTERN);
-    REBLEN index = VAL_IMAGE_POS(image);
+    Index index = VAL_IMAGE_POS(image);
     REBLEN tail = VAL_IMAGE_LEN_HEAD(image);
     Byte* ip = VAL_IMAGE_AT(image);
 

@@ -87,7 +87,7 @@ INLINE REBLEN VAL_IMAGE_LEN_HEAD(const Cell* v) {
 }
 
 INLINE REBLEN VAL_IMAGE_LEN_AT(const Cell* v) {
-    if (VAL_IMAGE_POS(v) >= cast(REBIDX, VAL_IMAGE_LEN_HEAD(v)))
+    if (VAL_IMAGE_POS(v) >= VAL_IMAGE_LEN_HEAD(v))
         return 0;  // avoid negative position
     return VAL_IMAGE_LEN_HEAD(v) - VAL_IMAGE_POS(v);
 }
