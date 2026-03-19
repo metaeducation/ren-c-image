@@ -153,14 +153,14 @@ static Option(const Element*) Find_Non_Tuple_In_Array(const Element* any_array)
 
 
 IMPLEMENT_GENERIC(MAKE, Is_Image) {
-    INCLUDE_PARAMS_OF_MAKE;  // spec [<opt-out> hole? pair! block!]
+    INCLUDE_PARAMS_OF_MAKE;  // spec [pair! block!]
     UNUSED(PARAM(TYPE));
 
-    Element* spec = Element_ARG(DEF);
+    Element* spec = ARG(DEF);
 
-    if (Is_Hole(spec)) {  // empty image (same as make image! [])
+    if (Is_Space(spec)) {  // empty image (same as make image! [])
         Init_Image_Black_Opaque(OUT, 0, 0);
-        return OUT;
+        return BOUNCE_OUT;
     }
 
     if (Is_Pair(spec)) {  // `make image! 10x20`
@@ -169,7 +169,7 @@ IMPLEMENT_GENERIC(MAKE, Is_Image) {
         w = MAX(w, 0);
         h = MAX(h, 0);
         Init_Image_Black_Opaque(OUT, w, h);
-        return OUT;
+        return BOUNCE_OUT;
     }
 
     if (Is_Block(spec)) {  // make image! [size rgba index]
@@ -202,7 +202,7 @@ IMPLEMENT_GENERIC(MAKE, Is_Image) {
             if (Series_Index(item) != 0)
                 return fail ("MAKE IMAGE! w/BINARY! must have binary at HEAD");
 
-            if (Series_Len_Head(item) != cast(REBLEN, w * h * 4))
+            if (Series_Len_Head(item) != i_cast(REBLEN, w * h * 4))
                 return fail ("MAKE IMAGE! w/BINARY! needs RGBA pixels for size");
 
             Init_Image(OUT, Cell_Binary(item), w, h);
@@ -226,7 +226,7 @@ IMPLEMENT_GENERIC(MAKE, Is_Image) {
             ++item;
             if (Is_Integer(item)) {
                 Fill_Alpha_Rect(
-                    ip, cast(Byte, VAL_INT32(item)), w, w, h
+                    ip, i_cast(Byte, VAL_INT32(item)), w, w, h
                 );
                 ++item;
             }
@@ -250,7 +250,7 @@ IMPLEMENT_GENERIC(MAKE, Is_Image) {
         if (item != tail)
             panic ("Too many elements in BLOCK! for MAKE IMAGE!");
 
-        return OUT;
+        return BOUNCE_OUT;
     }
 
     panic (PARAM(DEF));
@@ -311,18 +311,18 @@ IMPLEMENT_GENERIC(EQUAL_Q, Is_Image)
     Element* b = Element_ARG(VALUE2);
 
     if (VAL_IMAGE_WIDTH(a) != VAL_IMAGE_WIDTH(b))
-        return LOGIC(false);
+        return LOGIC_OUT(false);
 
     if (VAL_IMAGE_HEIGHT(a) != VAL_IMAGE_HEIGHT(b))
-        return LOGIC(false);
+        return LOGIC_OUT(false);
 
     if (VAL_IMAGE_POS(a) != VAL_IMAGE_POS(b))
-        return LOGIC(false);
+        return LOGIC_OUT(false);
 
     assert(VAL_IMAGE_LEN_AT(a) == VAL_IMAGE_LEN_AT(b));
 
     int cmp = memcmp(VAL_IMAGE_AT(a), VAL_IMAGE_AT(b), VAL_IMAGE_LEN_AT(a));
-    return LOGIC(cmp == 0);
+    return LOGIC_OUT(cmp == 0);
 }
 
 
@@ -553,11 +553,11 @@ static Bounce Modify_Image(Level* level_, SymId sym)
     if (not ARG(VALUE)) {  // void
         if (sym == SYM_APPEND)  // append returns head position
             VAL_IMAGE_POS(value) = 0;
-        return COPY(value);  // don't panic on read only if it would be noop
+        return COPY_TO_OUT(value);  // don't panic on read only for noops
     }
     if (Is_Antiform(unwrap ARG(VALUE)))
         panic (PARAM(VALUE));
-    Element* arg = Element_ARG(VALUE);
+    Element* arg = unwrap Element_ARG(VALUE);
 
     if (ARG(LINE))
         panic (Error_Bad_Refines_Raw());
@@ -570,7 +570,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
 
     REBINT w = VAL_IMAGE_WIDTH(value);
     if (w == 0)
-        return COPY(value);
+        return COPY_TO_OUT(value);
 
     if (sym == SYM_APPEND) {
         index = tail;
@@ -598,20 +598,20 @@ static Bounce Modify_Image(Level* level_, SymId sym)
             dup = VAL_INT32(d);
             dup = MAX(dup, 0);
             if (dup == 0)
-                return COPY(value);
+                return COPY_TO_OUT(value);
         }
         else if (Is_Pair(d)) {  // rectangular dup
             dup_x = Cell_Pair_X(d);
             dup_y = Cell_Pair_Y(d);
             dup_x = MAX(dup_x, 0);
-            dup_x = MIN(dup_x, cast(REBINT, w) - x);  // clip dup width
+            dup_x = MIN(dup_x, i_cast(REBINT, w) - x);  // clip dup width
             dup_y = MAX(dup_y, 0);
             if (sym != SYM_INSERT)
-                dup_y = MIN(dup_y, cast(REBINT, VAL_IMAGE_HEIGHT(value)) - y);
+                dup_y = MIN(dup_y, i_cast(REBINT, VAL_IMAGE_HEIGHT(value)) - y);
             else
                 dup = dup_y * w;
             if (dup_x == 0 or dup_y == 0)
-                return COPY(value);
+                return COPY_TO_OUT(value);
         }
         else
             panic (PARAM(DUP));
@@ -644,7 +644,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
                 part_x = VAL_IMAGE_POS(p) - VAL_IMAGE_POS(arg);
                 part_y = part_x / VAL_IMAGE_WIDTH(p);
                 part_y = MAX(part_y, 1);
-                part_x = MIN(part_x, cast(REBINT, VAL_IMAGE_WIDTH(arg)));
+                part_x = MIN(part_x, i_cast(REBINT, VAL_IMAGE_WIDTH(arg)));
                 goto len_compute;
             }
             else if (Is_Pair(p)) {
@@ -652,17 +652,17 @@ static Bounce Modify_Image(Level* level_, SymId sym)
                 part_y = Cell_Pair_Y(p);
             len_compute:
                 part_x = MAX(part_x, 0);
-                part_x = MIN(part_x, cast(REBINT, w) - x);  // clip part width
+                part_x = MIN(part_x, i_cast(REBINT, w) - x);  // clip part width
                 part_y = MAX(part_y, 0);
                 if (sym != SYM_INSERT)
                     part_y = MIN(
                         part_y,
-                        cast(REBINT, VAL_IMAGE_HEIGHT(value) - y)
+                        i_cast(REBINT, VAL_IMAGE_HEIGHT(value) - y)
                     );
                 else
                     part = part_y * w;
                 if (part_x == 0 || part_y == 0)
-                    return COPY(value);
+                    return COPY_TO_OUT(value);
             }
             else
                 panic (PARAM(PART));
@@ -674,9 +674,9 @@ static Bounce Modify_Image(Level* level_, SymId sym)
         if (Is_Image(arg)) {  // Use image for /PART sizes
             part_x = VAL_IMAGE_WIDTH(arg);
             part_y = VAL_IMAGE_HEIGHT(arg);
-            part_x = MIN(part_x, cast(REBINT, w) - x);  // clip part width
+            part_x = MIN(part_x, i_cast(REBINT, w) - x);  // clip part width
             if (sym != SYM_INSERT)
-                part_y = MIN(part_y, cast(REBINT, VAL_IMAGE_HEIGHT(value)) - y);
+                part_y = MIN(part_y, i_cast(REBINT, VAL_IMAGE_HEIGHT(value)) - y);
             else
                 part = part_y * w;
         }
@@ -718,10 +718,10 @@ static Bounce Modify_Image(Level* level_, SymId sym)
 
             if (Is_Pair(unwrap ARG(DUP)))  // rectangular fill
                 Fill_Alpha_Rect(
-                    ip, cast(Byte, arg_int), w, dup_x, dup_y
+                    ip, i_cast(Byte, arg_int), w, dup_x, dup_y
                 );
             else
-                Fill_Alpha_Line(ip, cast(Byte, arg_int), dup);
+                Fill_Alpha_Line(ip, i_cast(Byte, arg_int), dup);
         }
         else if (Is_Block(arg)) {  // RGB
             Byte pixel[4];
@@ -738,7 +738,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
     else if (Is_Blob(arg)) {
         Size size;
         const Byte* data = Blob_Size_At(&size, arg);
-        if (part > cast(REBINT, size))
+        if (part > i_cast(REBINT, size))
             part = size;  // clip it
         ip += index * 4;
         for (; dup > 0; dup--, ip += part * 4)
@@ -757,7 +757,7 @@ static Bounce Modify_Image(Level* level_, SymId sym)
 
     if (sym == SYM_APPEND)
         VAL_IMAGE_POS(value) = 0;
-    return COPY(value);
+    return COPY_TO_OUT(value);
 }
 
 
@@ -829,16 +829,16 @@ static Bounce Find_Image(Level* level_)
     Copy_Cell(OUT, image);
     assert((p - VAL_IMAGE_HEAD(image)) % 4 == 0);
 
-    REBINT n = cast(REBLEN, (p - VAL_IMAGE_HEAD(image)) / 4);
+    REBINT n = i_cast(REBLEN, (p - VAL_IMAGE_HEAD(image)) / 4);
     if (ARG(MATCH)) {
-        if (n != cast(REBINT, index)) {
+        if (n != i_cast(REBINT, index)) {
             return nullptr;
         }
         n++;
     }
 
     VAL_IMAGE_POS(image) = n;
-    return OUT;
+    return BOUNCE_OUT;
 }
 
 
@@ -891,7 +891,7 @@ IMPLEMENT_GENERIC(MOLDIFY, Is_Image)
 
     Element* cell = Element_ARG(VALUE);
     Molder* mo = Cell_Handle_Pointer(Molder, ARG(MOLDER));
-    bool form = did ARG(FORM);
+    bool form = ARG(FORM);
 
     UNUSED(form); // no difference between MOLD and FORM at this time
 
@@ -907,7 +907,7 @@ IMPLEMENT_GENERIC(MOLDIFY, Is_Image)
     );
     End_Non_Lexical_Mold(mo);
 
-    return TRASH;
+    return TRASH_OUT;
 }
 
 
@@ -926,9 +926,9 @@ static bool Adjust_Image_Pick_Index_Is_Valid(
     else if (Is_Integer(picker))
         n = VAL_INT32(picker);
     else if (Is_Decimal(picker))
-        n = cast(REBINT, VAL_DECIMAL(picker));
+        n = u_cast(REBINT, VAL_DECIMAL(picker));
     else
-        panic (picker);
+        panic (Error_Bad_Value(picker));
 
     *index += n;
     if (n > 0)
@@ -937,7 +937,7 @@ static bool Adjust_Image_Pick_Index_Is_Valid(
     if (
         n == 0
         or *index < 0
-        or *index >= cast(REBINT, VAL_IMAGE_LEN_HEAD(value))
+        or *index >= i_cast(REBINT, VAL_IMAGE_LEN_HEAD(value))
     ){
         return false; // out of range
     }
@@ -951,7 +951,7 @@ static bool Adjust_Image_Pick_Index_Is_Valid(
 //
 IMPLEMENT_GENERIC(OLDGENERIC, Is_Image)
 {
-    Element* image = Known_Element(ARG_N(1));
+    Element* image = As_Element(ARG_N(1));
 
     REBINT index = VAL_IMAGE_POS(image);
     REBINT tail = Binary_Len(Cell_Binary(VAL_IMAGE_BIN(image)));
@@ -966,7 +966,7 @@ IMPLEMENT_GENERIC(OLDGENERIC, Is_Image)
     switch (opt id) {
       case SYM_BITWISE_NOT:
         Make_Complemented_Image(OUT, image);
-        return OUT;
+        return BOUNCE_OUT;
 
       case SYM_SKIP:
       case SYM_AT: {
@@ -999,8 +999,8 @@ IMPLEMENT_GENERIC(OLDGENERIC, Is_Image)
         else if (index < 0)
             index = 0;
 
-        VAL_IMAGE_POS(image) = cast(REBLEN, index);
-        return COPY(image); }
+        VAL_IMAGE_POS(image) = i_cast(REBLEN, index);
+        return COPY_TO_OUT(image); }
 
       case SYM_CLEAR:
         UNUSED(&Clear_Image);
@@ -1008,11 +1008,11 @@ IMPLEMENT_GENERIC(OLDGENERIC, Is_Image)
         if (index < tail) {
             Set_Flex_Len(
                 Cell_Binary_Ensure_Mutable(VAL_IMAGE_BIN(image)),
-                cast(REBLEN, index)
+                i_cast(REBLEN, index)
             );
             Reset_Height(image);
         }
-        return COPY(image);
+        return COPY_TO_OUT(image);
 
       case SYM_REMOVE: {
         INCLUDE_PARAMS_OF_REMOVE;
@@ -1035,12 +1035,12 @@ IMPLEMENT_GENERIC(OLDGENERIC, Is_Image)
         }
         else len = 1;
 
-        index = cast(REBINT, VAL_IMAGE_POS(image));
+        index = i_cast(REBINT, VAL_IMAGE_POS(image));
         if (index < tail and len != 0) {
             Remove_Flex_Units_And_Update_Used(bin, index, len);
         }
         Reset_Height(image);
-        return COPY(image); }
+        return COPY_TO_OUT(image); }
 
       case SYM_APPEND:
       case SYM_INSERT:
@@ -1061,7 +1061,7 @@ IMPLEMENT_GENERIC(OLDGENERIC, Is_Image)
 static void Copy_Image_Value(Sink(Element) out, const Element* arg, REBINT len)
 {
     len = MAX(len, 0); // no negatives
-    len = MIN(len, cast(REBINT, VAL_IMAGE_LEN_AT(arg)));
+    len = MIN(len, i_cast(REBINT, VAL_IMAGE_LEN_AT(arg)));
 
     REBINT w = VAL_IMAGE_WIDTH(arg);
     w = MAX(w, 1);
@@ -1086,17 +1086,17 @@ IMPLEMENT_GENERIC(COPY, Is_Image)
 {
     INCLUDE_PARAMS_OF_COPY;
 
-    Element* image = Element_ARG(VALUE);
+    Element* image = ARG(VALUE);
 
     if (ARG(DEEP))
         panic (Error_Bad_Refines_Raw());
 
     if (not ARG(PART)) {
         Copy_Image_Value(OUT, image, VAL_IMAGE_LEN_AT(image));
-        return OUT;
+        return BOUNCE_OUT;
     }
 
-    Element* part = Element_ARG(PART);  // can be image, integer, pair.
+    Element* part = unwrap Element_ARG(PART);  // can be image, integer, pair.
 
     if (Is_Image(part)) {
         if (VAL_IMAGE_BIN(part) != VAL_IMAGE_BIN(image))
@@ -1104,13 +1104,13 @@ IMPLEMENT_GENERIC(COPY, Is_Image)
 
         REBINT len = VAL_IMAGE_POS(part) - VAL_IMAGE_POS(image);
         Copy_Image_Value(OUT, image, len);
-        return OUT;
+        return BOUNCE_OUT;
     }
 
     if (Is_Integer(part)) {
         REBINT len = VAL_INT32(part);
         Copy_Image_Value(OUT, image, len);
-        return OUT;
+        return BOUNCE_OUT;
     }
 
     if (Is_Pair(part)) {
@@ -1139,7 +1139,7 @@ IMPLEMENT_GENERIC(COPY, Is_Image)
         /*
             VAL_IMAGE_TRANSP(OUT) = VAL_IMAGE_TRANSP(image);  // ???
         */
-        return OUT;
+        return BOUNCE_OUT;
     }
 
     panic (PARAM(PART));
@@ -1153,7 +1153,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
     Element* image = Element_ARG(LOCATION);
     const Stable* picker = ARG(PICKER);
 
-    REBINT index = cast(REBINT, VAL_IMAGE_POS(image));
+    REBINT index = i_cast(REBINT, VAL_IMAGE_POS(image));
     REBINT len = VAL_IMAGE_LEN_HEAD(image) - index;
     len = MAX(len, 0);
 
@@ -1161,7 +1161,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
 
     Stable* dual = ARG(DUAL);
     if (Not_Lifted(dual)) {
-        if (Is_Dual_Nulled_Pick_Signal(dual))
+        if (Is_Null_Signifying_Tweak_Is_Pick(dual))
             goto handle_pick;
 
         panic (Error_Bad_Poke_Dual_Raw(dual));
@@ -1207,18 +1207,18 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
         );
     }
     else
-        return DUAL_SIGNAL_NULL_ABSENT;
+        return NULL_OUT_SLOT_UNAVAILABLE;
 
-    return DUAL_LIFTED(OUT);
+    return LIFT_OUT_FOR_DUAL_PICK;
 
 } handle_poke: { /////////////////////////////////////////////////////////////
 
-    Unliftify_Known_Stable(dual);
+    Known_Stable_Unlift_Cell(dual);
 
     if (Is_Antiform(dual))
         panic (Error_Bad_Antiform(dual));
 
-    Element* poke = Known_Element(dual);
+    Element* poke = As_Element(dual);
 
     Cell_Binary_Ensure_Mutable(VAL_IMAGE_BIN(image));
 
@@ -1231,7 +1231,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
             VAL_IMAGE_WIDTH(image) = Cell_Pair_X(poke);
             VAL_IMAGE_HEIGHT(image) = MIN(
                 Cell_Pair_Y(poke),
-                cast(REBINT,
+                i_cast(REBINT,
                     Series_Len_Head(VAL_IMAGE_BIN(image))
                     / Cell_Pair_X(poke)
                 )
@@ -1276,7 +1276,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
                 if (n < 0 || n > 255)
                     panic (Error_Out_Of_Range(poke));
 
-                Fill_Alpha_Line(src, cast(Byte, n), len);
+                Fill_Alpha_Line(src, i_cast(Byte, n), len);
             }
             else if (Is_Blob(poke)) {
                 Size size;
@@ -1288,9 +1288,9 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
             break;
 
           default:
-            panic (picker);
+            panic (PARAM(PICKER));
         }
-        return NO_WRITEBACK_NEEDED;
+        return OKAY_OUT_NO_WRITEBACK;
     }
 
     if (not Adjust_Image_Pick_Index_Is_Valid(&index, image, picker))
@@ -1298,7 +1298,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
 
     if (Is_Tuple(poke)) { // set whole pixel
         Set_Pixel_Tuple(VAL_IMAGE_AT_HEAD(image, index), poke);
-        return NO_WRITEBACK_NEEDED;
+        return OKAY_OUT_NO_WRITEBACK;
     }
 
     // set the alpha only
@@ -1319,7 +1319,7 @@ IMPLEMENT_GENERIC(TWEAK_P, Is_Image)
     Byte* dp = VAL_IMAGE_AT_HEAD(image, index);
     dp[3] = alpha;
 
-    return NO_WRITEBACK_NEEDED;
+    return OKAY_OUT_NO_WRITEBACK;
 }}
 
 
@@ -1329,7 +1329,7 @@ IMPLEMENT_GENERIC(HEAD_OF, Is_Image)
 
     Element* image = Element_ARG(VALUE);
     VAL_IMAGE_POS(image) = 0;
-    return COPY(image);
+    return COPY_TO_OUT(image);
 }
 
 
@@ -1339,7 +1339,7 @@ IMPLEMENT_GENERIC(TAIL_OF, Is_Image)
 
     Element* image = Element_ARG(VALUE);
     VAL_IMAGE_POS(image) = VAL_IMAGE_LEN_HEAD(image);
-    return COPY(image);
+    return COPY_TO_OUT(image);
 }
 
 
@@ -1348,7 +1348,7 @@ IMPLEMENT_GENERIC(HEAD_Q, Is_Image)
     INCLUDE_PARAMS_OF_HEAD_Q;
 
     Element* image = Element_ARG(VALUE);
-    return LOGIC(VAL_IMAGE_POS(image) == 0);
+    return LOGIC_OUT(VAL_IMAGE_POS(image) == 0);
 }
 
 
@@ -1357,17 +1357,17 @@ IMPLEMENT_GENERIC(TAIL_Q, Is_Image)
     INCLUDE_PARAMS_OF_TAIL_Q;
 
     Element* image = Element_ARG(VALUE);
-    return LOGIC(VAL_IMAGE_POS(image) >= VAL_IMAGE_LEN_HEAD(image));
+    return LOGIC_OUT(VAL_IMAGE_POS(image) >= VAL_IMAGE_LEN_HEAD(image));
 }
 
 
 //
-//  export xy-of: native [
+//  export /xy-of: native [
 //
 //  "Get current index into an IMAGE! value as a pair!"
 //
-//      return: [<null> pair!]
-//      image [<opt-out> image!]
+//      return: [pair!]
+//      image [image!]
 //  ]
 //
 DECLARE_NATIVE(XY_OF)
@@ -1376,11 +1376,12 @@ DECLARE_NATIVE(XY_OF)
 
     Element* image = Element_ARG(IMAGE);
     REBINT index = VAL_IMAGE_POS(image);
-    return Init_Pair(
+    Init_Pair(
         OUT,
         index % VAL_IMAGE_WIDTH(image),
         index / VAL_IMAGE_WIDTH(image)
     );
+    return BOUNCE_OUT;
 }
 
 
@@ -1389,7 +1390,8 @@ IMPLEMENT_GENERIC(INDEX_OF, Is_Image)
     INCLUDE_PARAMS_OF_INDEX_OF;
 
     Element* image = Element_ARG(VALUE);
-    return Init_Integer(OUT, VAL_IMAGE_POS(image) + 1);
+    Init_Integer(OUT, VAL_IMAGE_POS(image) + 1);
+    return BOUNCE_OUT;
 }
 
 
@@ -1401,7 +1403,8 @@ IMPLEMENT_GENERIC(LENGTH_OF, Is_Image)
     REBINT index = VAL_IMAGE_POS(image);
     REBINT tail = VAL_IMAGE_LEN_HEAD(image);
 
-    return Init_Integer(OUT, tail > index ? tail - index : 0);
+    Init_Integer(OUT, tail > index ? tail - index : 0);
+    return BOUNCE_OUT;
 }
 
 
@@ -1413,40 +1416,41 @@ IMPLEMENT_GENERIC(BYTES_OF, Is_Image)
 {
     INCLUDE_PARAMS_OF_BYTES_OF;
 
-    Element* image = Element_ARG(VALUE);
+    Element* image = ARG(VALUE);
 
     const Binary* bin = Cell_Binary(VAL_IMAGE_BIN(image));
-    return Init_Blob(OUT, bin);  // at 0 index
+    Init_Blob(OUT, bin);  // at 0 index
+    return BOUNCE_OUT;
 }
 
 
 //
-//  startup*: native [
+//  /startup*: native [
 //
 //  "Startup IMAGE! Extension"
 //
-//      return: ~
+//      return: [trash!]
 //  ]
 //
 DECLARE_NATIVE(STARTUP_P)
 {
     INCLUDE_PARAMS_OF_STARTUP_P;
 
-    return TRASH;
+    return TRASH_OUT;
 }
 
 
 //
-//  shutdown*: native [
+//  /shutdown*: native [
 //
 //  "Shutdown IMAGE! Extension"
 //
-//      return: ~
+//      return: [trash!]
 //  ]
 //
 DECLARE_NATIVE(SHUTDOWN_P)
 {
     INCLUDE_PARAMS_OF_SHUTDOWN_P;
 
-    return TRASH;
+    return TRASH_OUT;
 }
