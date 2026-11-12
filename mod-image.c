@@ -926,7 +926,7 @@ static bool Adjust_Image_Pick_Index_Is_Valid(
     else if (Is_Integer(picker))
         n = VAL_INT32(picker);
     else if (Is_Decimal(picker))
-        n = u_cast(REBINT, VAL_DECIMAL(picker));
+        n = raw_cast(REBINT, VAL_DECIMAL(picker));
     else
         panic (Error_Bad_Value(picker));
 
