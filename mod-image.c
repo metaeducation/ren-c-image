@@ -200,10 +200,10 @@ IMPLEMENT_GENERIC(MAKE, Is_Image) {
             // directly as-is...so Ren-C only supports RGBA.
 
             if (Series_Index(item) != 0)
-                return fail ("MAKE IMAGE! w/BINARY! must have binary at HEAD");
+                return_fail ("MAKE IMAGE! w/BINARY! must have binary at HEAD");
 
             if (Series_Len_Head(item) != i_cast(REBLEN, w * h * 4))
-                return fail ("MAKE IMAGE! w/BINARY! needs RGBA pixels for size");
+                return_fail ("MAKE IMAGE! w/BINARY! needs RGBA pixels for size");
 
             Init_Image(OUT, Cell_Binary(item), w, h);
             ++item;
