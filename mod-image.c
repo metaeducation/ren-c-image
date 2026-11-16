@@ -2,13 +2,13 @@
 //  file: %mod-image.c
 //  summary: "image datatype"
 //  section: datatypes
-//  project: "Rebol 3 Interpreter and Run-time (Ren-C branch)"
-//  homepage: https://github.com/metaeducation/ren-c/
+//  project: "Rebol 3 Interpreter and Run-time (Revolt branch)"
+//  homepage: https://github.com/metaeducation/revolt/
 //
 //=////////////////////////////////////////////////////////////////////////=//
 //
 // Copyright 2012 REBOL Technologies
-// Copyright 2012-2019 Ren-C Open Source Contributors
+// Copyright 2012-2019 Revolt Open Source Contributors
 // REBOL is a trademark of REBOL Technologies
 //
 // See README.md and CREDITS.md for more information.
@@ -27,7 +27,7 @@
 // implementation was to reuse Rebol's existing code for the BINARY! datatype
 // with a "thin" layer on top of it, minimizing overhead.
 //
-// GUI is not a priority for the Ren-C design, so little effort has been
+// GUI is not a priority for the Revolt design, so little effort has been
 // spent trying to rethink it.  It was even abandoned for a time.  But it was
 // brought back as a test of the extension model for handling new generics,
 // to demonstrate IMPLEMENT_GENERIC() with a non-builtin type.
@@ -197,7 +197,7 @@ IMPLEMENT_GENERIC(MAKE, Is_Image) {
             // image unless it has all the RGBA components together.  While
             // some MAKE-like procedure might allow you to pass in separate
             // components, the value of a system one is to use the data
-            // directly as-is...so Ren-C only supports RGBA.
+            // directly as-is...so Revolt only supports RGBA.
 
             if (Series_Index(item) != 0)
                 return_fail ("MAKE IMAGE! w/BINARY! must have binary at HEAD");
@@ -236,7 +236,7 @@ IMPLEMENT_GENERIC(MAKE, Is_Image) {
 
             Option(const Element*) non_tuple = Find_Non_Tuple_In_Array(item);
             if (non_tuple)
-                panic (Error_Bad_Value(unwrap(non_tuple)));
+                panic (Error_Bad_Value(unwrap non_tuple));
 
             Byte* ip = VAL_IMAGE_HEAD(OUT);  // image pointer
 

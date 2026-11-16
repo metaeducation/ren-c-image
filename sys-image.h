@@ -1,13 +1,13 @@
 //
 //  file: %sys-image.h
 //  summary: {Definitions for IMAGE! Datatype}
-//  project: "Rebol 3 Interpreter and Run-time (Ren-C branch)"
-//  homepage: https://github.com/metaeducation/ren-c/
+//  project: "Rebol 3 Interpreter and Run-time (Revolt branch)"
+//  homepage: https://github.com/metaeducation/revolt/
 //
 //=////////////////////////////////////////////////////////////////////////=//
 //
 // Copyright 2012 REBOL Technologies
-// Copyright 2012-2019 Ren-C Open Source Contributors
+// Copyright 2012-2019 Revolt Open Source Contributors
 // REBOL is a trademark of REBOL Technologies
 //
 // See README.md and CREDITS.md for more information
@@ -30,7 +30,7 @@
 //=//// IMAGE STUB SUBCLASS ///////////////////////////////////////////////=//
 
 // The optimization of using the LINK() and MISC() fields of a Binary is
-// not used in Ren-C's image, because that would preclude the use of a
+// not used in Revolt's image, because that would preclude the use of a
 // BLOB! from another source who needed those fields for some other form
 // of tracking.  (Imagine if vector used MISC() for its signed flag, and
 // you tried to `make image! bytes of my-vector`, overwriting the flag
